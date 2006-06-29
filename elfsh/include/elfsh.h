@@ -7,7 +7,7 @@
  #define __ELFSH_H_
 
 /* User defined configuration */
-#include "../../vars.h"
+#include "elfsh-vars.h"
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -171,8 +171,8 @@ extern asm_processor	proc;
 char prompt_token[128];
 #define ELFSH_SNAME		"elfsh"
 #define	ELFSH_VERSION		"0.7"
-#define	ELFSH_RELEASE		"a7p3rc2"
-#define ELFSH_EDITION		"brz"
+#define	ELFSH_RELEASE		"a8"
+#define ELFSH_EDITION		"moto"
 
 /* Unused, feel free to try it, its awesome */
 #define ELFSH_CIRCUS_PROMPT	"\033[00;01;30m(" \
@@ -358,10 +358,6 @@ char prompt_token[128];
 #define	CMD_LIST2		 "l"
 #define	CMD_WORKSPACE		 "workspace"
 #define	CMD_WORKSPACE2		 "w"
-
-#ifdef __DEBUG_TEST__
-#define CMD_TEST		 "test"
-#endif
 
 /* Regx option, a module of struct s_args */
 typedef struct		s_list
@@ -1075,6 +1071,7 @@ int             vm_setvar_long(char *varname, u_long val);
 
 /* Readline stuff (XXX: need to be prefixed) */
 char		**custom_completion(const char* text, int start, int end);
+int		update_col();
 
 /* Color functions */
 color_t         *vm_colortable(char *t, char *te);
