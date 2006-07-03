@@ -8,7 +8,7 @@
 #ifndef __LIBELFSH_H_
  #define __LIBELFSH_H_
 
-#include "../../libvars.h"
+#include "libvars.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,18 +20,22 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
-#define __USE_GNU
-#include <sys/ucontext.h>
 
-#include "libc.h"
+#include "elfsh-libc.h"
 
 #include <elf.h>
+
+#include <libelfsh/libelfsh-compat.h>
 
 #ifdef __BEOS__
  #include <bsd_mem.h>
 #endif
 
-#include <libelfsh/libelfsh-compat.h>
+
+#define __USE_GNU
+#include <sys/ucontext.h>
+
+
 
 /* Configure the DEBUG modes for various part of the code */
 #define		__DEBUG_MAP__			0
@@ -60,7 +64,8 @@
 #define		ELFSH_ARCH_ALPHA64		8	
 #define		ELFSH_ARCH_MIPS32		9
 #define		ELFSH_ARCH_MIPS64		10	/* No hooks yet */
-#define		ELFSH_ARCHNUM			11
+#define         ELFSH_ARCH_ARM                  11
+#define         ELFSH_ARCHNUM                   12
 #define		ELFSH_ARCH_ERROR		0xFF
 
 /* ELFsh ELF types */

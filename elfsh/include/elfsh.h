@@ -7,7 +7,7 @@
  #define __ELFSH_H_
 
 /* User defined configuration */
-#include "../../vars.h"
+#include "elfsh-vars.h"
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -171,8 +171,8 @@ extern asm_processor	proc;
 char prompt_token[128];
 #define ELFSH_SNAME		"elfsh"
 #define	ELFSH_VERSION		"0.7"
-#define	ELFSH_RELEASE		"a7p3rc2"
-#define ELFSH_EDITION		"brz"
+#define	ELFSH_RELEASE		"a8"
+#define ELFSH_EDITION		"moto"
 
 /* Unused, feel free to try it, its awesome */
 #define ELFSH_CIRCUS_PROMPT	"\033[00;01;30m(" \
@@ -359,10 +359,6 @@ char prompt_token[128];
 #define	CMD_WORKSPACE		 "workspace"
 #define	CMD_WORKSPACE2		 "w"
 
-#ifdef __DEBUG_TEST__
-#define CMD_TEST		 "test"
-#endif
-
 /* Regx option, a module of struct s_args */
 typedef struct		s_list
 {
@@ -466,32 +462,32 @@ typedef struct          s_color
 #define COLOR_NONE         0
 #define COLOR_BOLD         1
 #define COLOR_UNDERLINE    4
-#define COLOR_RESET        160                                                                                                                                       
-#define COLOR_SEPARE       ";"                                                                                                                                       
-                                                                                                                                                                     
+#define COLOR_RESET        160
+#define COLOR_SEPARE       ";"
+
 #define COLOR_TOKENS       50
 #define COLOR_TOKEN_LEN    140
-                                                                                                                                                                     
-#define COLOR_FG_BLACK     30                                                                                                                                        
-#define COLOR_FG_RED       31                                                                                                                                        
-#define COLOR_FG_GREEN     32                                                                                                                                        
-#define COLOR_FG_YELLOW    33                                                                                                                                        
-#define COLOR_FG_BLUE      34                                                                                                                                        
-#define COLOR_FG_MAGENTA   35                                                                                                                                        
-#define COLOR_FG_CYAN      36                                                                                                                                        
-#define COLOR_FG_WHITE     37                                                                                                                                        
-                                                                                                                                                                     
-#define COLOR_BG_BLACK     40                                                                                                                                        
-#define COLOR_BG_RED       41                                                                                                                                        
-#define COLOR_BG_GREEN     42                                                                                                                                        
-#define COLOR_BG_YELLOW    43                                                                                                                                        
-#define COLOR_BG_BLUE      44                                                                                                                                        
-#define COLOR_BG_MAGENTA   45                                                                                                                                        
-#define COLOR_BG_CYAN      46                                                                                                                                        
-#define COLOR_BG_WHITE     47                                                                                                                                        
-  u_int                 fground;                                                                                                                                     
-  u_int                 bground;                                                                                                                                     
-  u_int                 bold;                                                                                                                                        
+
+#define COLOR_FG_BLACK     30
+#define COLOR_FG_RED       31
+#define COLOR_FG_GREEN     32
+#define COLOR_FG_YELLOW    33
+#define COLOR_FG_BLUE      34
+#define COLOR_FG_MAGENTA   35
+#define COLOR_FG_CYAN      36
+#define COLOR_FG_WHITE     37
+
+#define COLOR_BG_BLACK     40
+#define COLOR_BG_RED       41
+#define COLOR_BG_GREEN     42
+#define COLOR_BG_YELLOW    43
+#define COLOR_BG_BLUE      44
+#define COLOR_BG_MAGENTA   45
+#define COLOR_BG_CYAN      46
+#define COLOR_BG_WHITE     47
+  u_int                 fground;
+  u_int                 bground;
+  u_int                 bold;
   u_int                 underline;                                            
   
 }                       color_t;
@@ -1075,6 +1071,9 @@ int             vm_setvar_long(char *varname, u_long val);
 
 /* Readline stuff (XXX: need to be prefixed) */
 char		**custom_completion(const char* text, int start, int end);
+int		update_col();
+void		*vm_readline_malloc(unsigned int sz);
+void		vm_readline_free(void *ptr);
 
 /* Color functions */
 color_t         *vm_colortable(char *t, char *te);
