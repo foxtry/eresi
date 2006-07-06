@@ -191,6 +191,9 @@ typedef struct		s_e2dbgworld
   elfsh_Addr		memalignhooksym;		/* Resolved libc memalign hook */
   elfsh_Addr		pthstartupsym;			/* Resolved __libc_malloc_pthread_startup */
 
+  /* Early resolved linkmap when malloc is not available */
+  elfshlinkmap_t	*map;
+
   /* Synchronization values */
 #define			ELFSH_MUTEX_UNLOCKED	0
 #define			ELFSH_MUTEX_LOCKED	1
@@ -280,17 +283,10 @@ int		e2dbg_mutex_lock(elfshmutex_t *m);
 int		e2dbg_mutex_unlock(elfshmutex_t *m);
 void		e2dbg_start_proc();
 
-/*
-elfsh_Addr	e2dbg_dlsym(elfshobj_t *file, char *symname);
-void		*e2dbg_dlopen(char *objname, elfsh_Addr refaddr, char *refsym);
-void		e2dbg_dlclose(elfshobj_t *file);
-*/
-
-elfsh_Addr	e2dbg_dlsym(char *objname, char *sym2resolve, 
-			    elfsh_Addr refaddr, char *refsym);
-
-
-int		e2dbg_load_linkmap(char *name);
+/* Early symbol resolving API */
+int			e2dbg_load_linkmap(char *name);
+elfshlinkmap_t*		e2dbg_linkmap_getaddr();
+elfsh_Addr		e2dbg_dlsym(char *sym2resolve);
 
 /* e2dbg commands */
 int             cmd_mode();

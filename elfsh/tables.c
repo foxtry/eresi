@@ -791,6 +791,7 @@ static void	setup_cmdhash()
   vm_addcmd(CMD_VERB2   , (void *) cmd_verb    , (void *) NULL            , 0, HLP_VERB);
   vm_addcmd(CMD_SORT    , (void *) cmd_sort    , (void *) vm_getoption    , 0, HLP_SORT);
   vm_addcmd(CMD_SORT2   , (void *) cmd_sort    , (void *) vm_getoption    , 0, HLP_SORT);
+  vm_addcmd(CMD_TRACE   , (void *) cmd_trace   , (void *) vm_getvarparams , 0, HLP_TRACE);
 
   vm_addcmd(CMD_ALL	, (void *) cmd_glregx  , (void *) vm_getoption    , 0, HLP_ALL);
   vm_addcmd(CMD_ALL2	, (void *) cmd_glregx  , (void *) vm_getoption    , 0, HLP_ALL);
@@ -838,10 +839,6 @@ static void	setup_cmdhash()
   vm_addcmd(CMD_VERNEED , (void *) cmd_verneed , (void *) vm_getregxoption , 1, HLP_VERNEED);
   vm_addcmd(CMD_VERDEF  , (void *) cmd_verdef  , (void *) vm_getregxoption , 1, HLP_VERDEF);
   vm_addcmd(CMD_HASH    , (void *) cmd_hashx   , (void *) vm_getregxoption, 0, HLP_HASH);
-
-#ifdef __DEBUG_TEST__
-  vm_addcmd(CMD_TEST   , (void *) cmd_test  , (void *) NULL         , 0, "Test command");
-#endif 
 
 #if defined(ELFSHNET)
   vm_addcmd(CMD_NETWORK   , (void *) cmd_network  , (void *) NULL            , 0, HLP_NETWORK);
