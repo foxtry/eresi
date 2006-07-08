@@ -8,7 +8,7 @@
 #ifndef __LIBELFSH_H_
  #define __LIBELFSH_H_
 
-#include "../../libvars.h"
+#include "libvars.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,18 +20,21 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
-#define __USE_GNU
-#include <sys/ucontext.h>
 
-#include "libc.h"
+#include "elfsh-libc.h"
 
 #include <elf.h>
+
+#include <libelfsh/libelfsh-compat.h>
 
 #ifdef __BEOS__
  #include <bsd_mem.h>
 #endif
 
-#include <libelfsh/libelfsh-compat.h>
+
+#define __USE_GNU
+#include <sys/ucontext.h>
+
 
 /* Configure the DEBUG modes for various part of the code */
 #define		__DEBUG_MAP__			0
@@ -47,6 +50,7 @@
 #define		__DEBUG_STATIC__		0
 #define		__DEBUG_BREAKPOINTS__		0
 #define		__DEBUG_ETRELintoETDYN__	0
+#define		__DEBUG_EXTPLT__		0
 
 /* ELFsh architecture types */
 #define		ELFSH_ARCH_IA32			0
@@ -60,7 +64,8 @@
 #define		ELFSH_ARCH_ALPHA64		8	
 #define		ELFSH_ARCH_MIPS32		9
 #define		ELFSH_ARCH_MIPS64		10	/* No hooks yet */
-#define		ELFSH_ARCHNUM			11
+#define         ELFSH_ARCH_ARM                  11
+#define         ELFSH_ARCHNUM                   12
 #define		ELFSH_ARCH_ERROR		0xFF
 
 /* ELFsh ELF types */
@@ -105,6 +110,7 @@
 #define		ELFSH_HOOK_BREAK		"hook_setbreak"
 #define		ELFSH_HOOK_EXTPLT		"hook_extplt"
 #define		ELFSH_HOOK_ALTPLT		"hook_altplt"
+#define		ELFSH_HOOK_ARGC			"hook_argc"
 
 /* Some defined values */
 #define		ELFSH_SECTION_NAME_MAPPED	".mapped"
@@ -239,6 +245,8 @@
 #define		ELFSH_UNMAPPED_INJECTION	2
 #define		ELFSH_UNKNOWN_INJECTION		3
 
+#define		ELFSH_TRACE_MAX_ARGS		30
+
 #define		STT_BLOCK			(STT_NUM + 1)
 
 
@@ -266,6 +274,21 @@
 				 FILE_IS_SPARC64((scn)->parent) || \
 				 FILE_IS_IA64((scn)->parent)    || \
 				 FILE_IS_ALPHA64((scn)->parent) ? 0 : 1)
+
+
+#define ELFSH_SELECT_INJECTION(a, b, d)	\
+		do {	\
+    		if ((elfsh_get_ostype(a) == ELFSH_OS_FREEBSD || \
+    		    elfsh_get_ostype(a) == ELFSH_OS_BEOS || \
+		    elfsh_get_ostype(a) == ELFSH_OS_SOLARIS || \
+    		    FILE_IS_ALPHA64(a) || \
+		    FILE_IS_MIPS(a) || \
+    		    FILE_IS_SPARC(a)) || (b)) { \
+    		    d = ELFSH_DATA_INJECTION; \
+		} else { \
+		    d = ELFSH_CODE_INJECTION; \
+		}\
+	    } while (0)
 
 /* Old Pax flags (to be read in elfhdr.e_flags) */
 #define		ELFSH_PAX_PAGEEXEC         1    /* Paging based non-exec pages */
@@ -1124,6 +1147,7 @@ u_char		elfsh_get_archtype(elfshobj_t *file);
 int		elfsh_default_plthandler(elfshobj_t *n, elfsh_Sym *n2, elfsh_Addr n3);
 int		elfsh_default_relhandler(elfshsect_t *n, elfsh_Rel *n2, elfsh_Addr *n3, elfsh_Addr n4, elfshsect_t *n5);
 int		elfsh_default_cflowhandler(elfshobj_t *n, char *n1, elfsh_Sym *n2, elfsh_Addr n3);
+int		elfsh_default_argchandler(elfsh_Addr addr);
 
 int		elfsh_register_altplthook(u_char arch, u_char obj, u_char os, void *fct);
 int		elfsh_register_plthook(u_char arch, u_char o, u_char os, void *fct);
@@ -1131,6 +1155,7 @@ int		elfsh_register_relhook(u_char a, u_char o, u_char os, void *fct);
 int		elfsh_register_cflowhook(u_char a, u_char o, u_char os, void *fct);
 int		elfsh_register_extplthook(u_char a, u_char o, u_char os, void *f);
 int		elfsh_register_breakhook(u_char a, u_char o, u_char os, void *fct);
+int		elfsh_register_argchook(u_char a, u_char o, u_char os, void *fct);
 
 int             elfsh_register_vector(char      *name,
                                       void      *registerfunc,
@@ -1155,6 +1180,8 @@ int             elfsh_encodeplt1(elfshobj_t *file, elfshsect_t *plt,
 				 elfshsect_t *extplt, elfsh_Addr diff);
 int             elfsh_extplt(elfshsect_t *extplt, elfshsect_t *altgot, 
 			     elfshsect_t *dynsym, elfshsect_t *relplt);
+int		*elfsh_args_count(elfshobj_t *file, u_int off, elfsh_Addr vaddr);
+
 
 
 /* sparc32.c */
@@ -1300,6 +1327,7 @@ int		elfsh_relocate_ia32(elfshsect_t	*_new,
 				    elfsh_Addr	*dword,
 				    elfsh_Addr	addr,
 				    elfshsect_t *mod);
+int           *elfsh_args_count_ia32(elfshobj_t *file, u_int off, elfsh_Addr vaddr);
 
 /* reginfo.c */
 elfsh_Sword	*elfsh_get_gpvalue_addr(elfshobj_t* file);
