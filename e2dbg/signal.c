@@ -8,6 +8,8 @@
 */
 #include "elfsh.h"
 
+
+
 /* Signal handler for SIGSEGV */
 void            e2dbg_sigsegv_handler(int signum, siginfo_t *info, void *pcontext)
 {
@@ -112,7 +114,6 @@ void			e2dbg_sigusr1_handler(int signum)
   elfsh_Addr		*pc; 
   u_int			bpsz;
 
-
 #if __DEBUG_MUTEX__
   char			buf2[BUFSIZ];
   snprintf(buf2, BUFSIZ, " [*] SigUSR1, E2dbg in action ... (count : %u)\n", count);
@@ -127,8 +128,8 @@ void			e2dbg_sigusr1_handler(int signum)
   pc = e2dbg_getpc();
 
   /* Print variables and registers on breakpoints */
-  if (!world.state.vm_quiet)
-    cmd_vlist();
+  //if (!world.state.vm_quiet)
+  //cmd_vlist();
 
   /* Try to find the breakpoint at current instruction pointer */
   snprintf(buf, sizeof(buf), XFMT, *pc - 1);
@@ -246,16 +247,23 @@ void			e2dbg_generic_breakpoint(int		signum,
 						 void		*pcontext)
 {
   ucontext_t		*context;
+  char			key[15];
 
 #if __DEBUG_MUTEX__
-  printf("\n [*] %s entering generic breakpoint \n",
-	 vm_dbgid_get() != pthread_self() ?
-	 "Debuggee" : "Debugger");
+  printf("\n [*] %s entering generic breakpoint (ID %u) \n",
+	 (vm_dbgid_get() != pthread_self() ? "Debuggee" : "Debugger"), 
+	 pthread_self());
 #endif
 
   context = (ucontext_t *) pcontext;
   CLRSIG;
   e2dbgworld.context = context;
+
+  /* We stop all threads and update the current thread information */
+  e2dbgworld.stoppedpid = pthread_self();
+  snprintf(key, sizeof(key), "%u", e2dbgworld.stoppedpid);
+  e2dbgworld.curthread  = hash_get(&e2dbgworld.threads, key);
+  e2dbg_thread_stopall();
 
   /* We call the debugger */
   pthread_kill(e2dbgworld.dbgpid, SIGUSR1);
@@ -281,20 +289,10 @@ void			e2dbg_generic_breakpoint(int		signum,
   else
     vm_output(" [*] Debuggee continuing & unlocking mutex SYN -> will wait start in the future\n");
 #endif
-
+  
   SETSIG;
 }
 
-
-int			func(void *params)
-{
-  while (1)
-    {
-      sleep(1);
-      printf("func thread\n");
-    }
-  return (0);
-}
 
 /* Our fake main function */
 int			e2dbg_fake_main(int argc, char **argv, char **aux)
@@ -303,7 +301,10 @@ int			e2dbg_fake_main(int argc, char **argv, char **aux)
   e2dbgparams_t		params;
   char			*args[3];
   char			*pn;
-  int			idx;
+#if __DEBUG_E2DBG__
+  int idx;
+#endif
+
 
 #if defined(__FreeBSD__)
   pn = __progname;
@@ -388,23 +389,8 @@ int	__libc_start_main(int (*main) (int, char **, char **aux),
   write(1, "[(e2dbg)__libc_start_main] there\n", 33);
 #endif
 
-  /*
-  e2dbgworld.libchandle = dlopen("/lib/libc.so.6", RTLD_NOW);
-  if (!e2dbgworld.libchandle)
-    {
-      write(1, "Error : LIBC HANDLE not found\n", 30);
-      return (-1);
-      ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,
-			"Libc not found", -1);
-    }
-  */
-
-
-
   /* Find the real symbol in libc */
-  orig = (elfsh_Addr) e2dbg_dlsym("/lib/libc.so.6", 
-				  "__libc_start_main", 
-				  (elfsh_Addr) read, "read");
+  orig = (elfsh_Addr) e2dbg_dlsym("__libc_start_main");
   if (!orig)
     {
       write(1, "Error : Orig __libc_start_main not found\n", 41);
@@ -425,12 +411,17 @@ int	__libc_start_main(int (*main) (int, char **, char **aux),
   /* Initalize mutexes */
   e2dbg_mutex_init(&e2dbgworld.dbgsyn);
   e2dbg_mutex_init(&e2dbgworld.dbgack);
+  e2dbg_mutex_init(&e2dbgworld.dbgter);
   if (e2dbg_mutex_lock(&e2dbgworld.dbgack) < 0)
     write(1, "Cannot lock initial dbgack mutex ! \n", 36);
+
+  //__asm__(".long 0xCCCCCCCC");
+  //raise(SIGSTOP);
 
 #if __DEBUG_E2DBG__
   write(1, "[(e2dbg)__libc_start_main] there 3\n", 35);
 #endif
+
 
   e2dbgworld.real_main = main;
   ret = libcstartmain(e2dbg_fake_main, argc, ubp_av, init, 
@@ -441,9 +432,6 @@ int	__libc_start_main(int (*main) (int, char **, char **aux),
 }
 
 #elif defined(__FreeBSD__)
-
-#undef  LIBC_PATH
-#define LIBC_PATH "/usr/lib/libc.so"
 
 int				atexit(void (*fini)(void))
 {
@@ -460,19 +448,15 @@ int				atexit(void (*fini)(void))
 #if __DEBUG_E2DBG__
   printf("[(e2dbg)atexit] there\n");
 #endif
-  
-  e2dbgworld.libchandle = dlopen("/usr/lib/libc.so", RTLD_NOW);
-  if (!e2dbgworld.libchandle)
-    ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,
-		      "Libc not found", -1);
 
-  /* Find the real symbol in libc */
-  orig = (elfsh_Addr) dlsym(e2dbgworld.libchandle, "atexit");
+  /* Find the real symbol */
+  orig = (elfsh_Addr) e2dbg_dlsym("atexit");
   if (!orig)
     {
-      dlerror();
+      write(1, "Error : Orig atexit not found\n", 30);
+      return (-1);
       ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
-			"Orig atexit", (-1));
+			"Orig atexit not found", (-1));
     }
   libc_atexit = (void *) orig;
   
@@ -505,7 +489,7 @@ int				atexit(void (*fini)(void))
     }
   
 #if __DEBUG_E2DBG__
-  printf("[(e2dbg)atexit 3] there 3\n");
+  printf("[(e2dbg)atexit 3]\n");
 #endif
   
   /* Recall the original function */
@@ -529,24 +513,19 @@ void			__fpstart(int argc, char**ubp_av)
   printf("[e2dbg__fpstart] Start\n");
 #endif
 
-  e2dbgworld.libchandle = dlopen("/lib/libc.so.6", RTLD_NOW);
-  if (!e2dbgworld.libchandle)
-    ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,
-		      "Libc not found", -1);
-
-  /* Find the real symbol in libc */
-  orig = (elfsh_Addr) dlsym(e2dbgworld.libchandle, "__fpstart");
+  /* Find the real symbol */
+  orig = (elfsh_Addr) e2dbg_dlsym("__fpstart");
   if (!orig)
-    ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
-		      "Orig __fpstart not found", (-1));
+    {
+      write(1, "Error : Orig __fpstart not found\n", 33);
+      return (-1);
+      ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
+			"Orig __fpstart not found", (-1));
+    }  
   realfpstart = (void *) orig;
 
 #if __DEBUG_E2DBG__
   printf("[e2dbg__fpstart] 2\n");
-#endif
-
-#if __DEBUG_E2DBG__
-  printf("[e2dbg__fpstart] 3\n");
 #endif
 
   /* Load the debugger */
