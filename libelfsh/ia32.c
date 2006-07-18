@@ -233,8 +233,8 @@ int			elfsh_cflow_ia32(elfshobj_t	*file,
   elfshsect_t		*hooks;
   elfshsect_t		*source;
   asm_instr		instrs[5];
-  char			buff[32];
-  int			ret, len;
+  u_char		buff[32];
+  u_int			ret, len;
   int			off;
   int			idx;
   char			*hookbuf;
@@ -244,7 +244,7 @@ int			elfsh_cflow_ia32(elfshobj_t	*file,
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
-#if 1	//__DEBUG_CFLOW__      
+#if 	__DEBUG_CFLOW__      
   printf("[DEBUG_CFLOW] Requesting hijack addr = %08X, sym.st_value = %08X, name = %s\n", 
 	 addr, symbol->st_value, name);
 #endif
@@ -382,7 +382,7 @@ int		elfsh_hijack_plt_ia32(elfshobj_t *file,
 
 
 /* Perform relocation on entry for INTEL architecture */
-/* not endianess independant - ym */
+/* XXX: not endianess independant - ym */
 int      elfsh_relocate_ia32(elfshsect_t	*new,
 			     elfsh_Rel		*cur,
 			     elfsh_Addr		*dword,
@@ -487,4 +487,182 @@ int      elfsh_relocate_ia32(elfshsect_t	*new,
 		     "Unsupported relocation type", -1);
     }
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
+}
+
+typedef struct s_int
+{
+  int		value;
+  struct s_int  *prec;
+  struct s_int	*next;
+}		s_sint;
+
+/* Personnal func / define for args_count */
+static int    elfsh_is_arg_ebp(asm_operand *op)
+{
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
+
+  if (op->base_reg == ASM_REG_EBP && op->imm > 0)
+    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, op->imm);
+
+  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
+}
+
+static int    elfsh_is_arg_esp(asm_operand *op, int sub)
+{
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
+
+  if (op->base_reg == ASM_REG_ESP && op->imm > sub)
+    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, op->imm);
+
+  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
+}
+
+static int    elfsh_largs_add(s_sint *args, int add)
+{
+  s_sint	      *p, *n;
+  int                 i;
+
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
+
+  if (add == 0 || args == NULL)
+    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, -1);
+
+  if (args->value == 0)
+    {
+      args->value = add;
+      ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
+    }
+
+  /* First entry */
+  while (args->prec)
+    args = args->prec;
+
+  for (i = 0, p = args; i < ELFSH_TRACE_MAX_ARGS 
+	 && p != NULL; i++, p = p->next)
+    {
+      /* Already add ? */
+      if (p->value == add)
+	break;
+
+      /* We sort result */
+      if (p->value > add)
+	{
+	  XALLOC(n, sizeof(s_sint), -1);
+	  n->value = add;
+	  
+	  n->prec = p->prec;
+	  p->prec = n;
+
+	  n->next = p;
+	  break;
+	}
+
+      /* Add at the tail */
+      if (p->next == NULL)
+	{
+	  XALLOC(n, sizeof(s_sint), -1);
+	  n->value = add;
+	  
+	  p->next = n;
+	  n->prec = p;
+	  break;
+	}
+    }
+
+  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
+}
+
+int           *elfsh_args_count_ia32(elfshobj_t *file, u_int foffset, elfsh_Addr vaddr)
+{
+  int         index;
+  int         ret;
+  int	      reserv = 0;
+  int	      ffp = 0;
+  int         len = 1024;
+  s_sint      *args = NULL, *p = NULL;
+  int	      *final_args;
+  asm_instr   i;
+
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
+
+  /* Reset args */
+  XALLOC(final_args, ELFSH_TRACE_MAX_ARGS * sizeof(int), NULL);
+
+  asm_init_i386(&proc);
+
+  /* Enumerate all arguments */
+  for (index = 0; index < len; index += ret)
+    {
+      /* Read an instruction */
+      if ((ret = asm_read_instr(&i, (u_char *) (foffset + index), len -  index, &proc)))
+	{
+	  /* We don't want to read another function */
+	  if (i.instr == ASM_RET)
+	    break;
+
+	  /* Check init form of the function */
+	  if (index == 0)
+	    {
+	      /* %esp based (-fomit-frame-pointer) */
+	      if (i.instr == ASM_SUB && i.op1.base_reg == ASM_REG_ESP)
+		{
+		  reserv = i.op2.imm;
+		  ffp = 1;
+		}
+
+	      XALLOC(args, sizeof(s_sint), NULL);
+	      args->value = 0;
+	    }
+	  else
+	    {
+	      if (ffp == 0)
+		{
+		  /* EBP based argument */
+		  elfsh_largs_add(args, elfsh_is_arg_ebp(&i.op1));
+		  elfsh_largs_add(args, elfsh_is_arg_ebp(&i.op2));
+		}
+	      else
+		{
+		  /* ESP based argument */
+		  elfsh_largs_add(args, elfsh_is_arg_esp(&i.op1, reserv));
+		  elfsh_largs_add(args, elfsh_is_arg_esp(&i.op2, reserv));
+		}
+	    }
+	}
+      else
+	break;
+    }
+
+  /* Go at the end */
+  while (args->next)
+    args = args->next;
+
+  final_args[0] = NULL;
+
+  /* Fill structure to return */
+  for (index = 0, p = args; index < ELFSH_TRACE_MAX_ARGS
+	 && p != NULL && p->value > 0; index++, p = p->prec)
+    {
+      /* Last entry */
+      if (p->next == NULL)
+	{
+	  if (ffp)
+	    final_args[index] = reserv - p->value + 20;
+	  else
+	    {
+	      final_args[index] = p->value - 16;
+
+	      /* XXX: wrong readed argument */
+	      if (final_args[index] < 0)
+		final_args[index] = 4;
+	    }
+
+	  continue;
+	}
+
+      /* Stock argument size which depend of the next entrie */
+      final_args[index] = p->next->value - p->value;
+    }
+
+  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, final_args);
 }

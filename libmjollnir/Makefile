@@ -1,30 +1,34 @@
 #
 # LibMjollnir Makefile
-# (C) 2006 Asgard Labs, thorolf a grid.einherjar.de
+# (C) 2006 Asgard Labs, thorolf
 # BSD License 
-# $Id: Makefile,v 1.1.1.5 2006-03-16 19:34:24 thor Exp $
+# $Id: Makefile,v 1.8 2006-07-08 21:24:13 thor Exp $
 #
 
-SRC= src/fngdb.c \
-     src/fngengine.c \
-     src/hunter.c \
-     src/bifrost.c \
-     src/libmjollnir.c
+include ../config.h
+
+SRC= src/blocks.c \
+     src/core.c \
+     src/destCall.c \
+     src/history.c \
+     src/init.c \
+     src/internal.c \
+     src/symtab.c
 
 OBJ=${SRC:.c=.o}
 
-SRCT = tools/thor.c
-OBJT = thor
+SRCT = bin/elfThor.c
+OBJT = elfThor
 
-SRCM = tools/mydisasm.c
-OBJM = mydisasm
+SRCUT = tools/mjollnirUnitTest.c
+OBJUT = mjollnirUnitTest
 
 CFLAGS= -I./include/ \
         -I../libc/include/ \
         -I../libasm/include/ \
         -I../libelfsh/include/ \
         -I../libhash/include/ \
-        -Wall -DELFSH32
+        -Wall $(BITS) -DELFSH_INTERN
 
 LDFLAGS= -L. -L../libasm/ \
          -L../libelfsh/ \
@@ -32,7 +36,7 @@ LDFLAGS= -L. -L../libasm/ \
          -L../libmalloc/ \
          -L/usr/lib/ \
          -L/usr/local/lib/ \
-         -lelfsh -lasm -lssl -lcelfsh -lmalloc-e2dbg -lmjollnir -lpthread
+         -lelfsh -lasm -lssl -lcelfsh -lmalloc-e2dbg -lmjollnir $(LPTHREAD)
 
 CC=gcc -ggdb -g3
 
@@ -42,11 +46,15 @@ all: $(OBJ)
 	@ar rc ${NAME} ${OBJ} 
 	@ranlib ${NAME}
 	$(CC) $(CFLAGS) $(SRCT) -o $(OBJT) $(LDFLAGS)
-	$(CC) $(CFLAGS) $(SRCM) -o $(OBJM) $(LDFLAGS)
+# comment this out if you don't want to make unittests 
+	$(CC) $(CFLAGS) -I/usr/local/include/ $(SRCUT) -o $(OBJUT) $(LDFLAGS) -lcheck
 
 
 clean:
 	rm -f src/*.o $(NAME) $(OBJT) $(OBJM)
+
+fclean: clean
+	rm -f bin/elfThor mjollnirUnitTest libmjollnir.a
 
 .c.o:
 	$(CC) $(CFLAGS) -c $*.c -o $*.o
