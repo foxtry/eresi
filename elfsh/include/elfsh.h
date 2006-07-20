@@ -7,7 +7,7 @@
  #define __ELFSH_H_
 
 /* User defined configuration */
-#include "../../vars.h"
+#include "elfsh-vars.h"
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -76,6 +76,7 @@ extern asm_processor	proc;
 #define __DEBUG_RESOLVE__	0
 #define __DEBUG_HIJACK__	0
 #define __DEBUG_TEST__		0
+#define __DEBUG_TRACE__		1
 
 /* Network related defines */
 #define ELFSH_PORT		4444
@@ -171,8 +172,8 @@ extern asm_processor	proc;
 char prompt_token[128];
 #define ELFSH_SNAME		"elfsh"
 #define	ELFSH_VERSION		"0.7"
-#define	ELFSH_RELEASE		"a7p3rc2"
-#define ELFSH_EDITION		"brz"
+#define	ELFSH_RELEASE		"a8"
+#define ELFSH_EDITION		"moto"
 
 /* Unused, feel free to try it, its awesome */
 #define ELFSH_CIRCUS_PROMPT	"\033[00;01;30m(" \
@@ -291,6 +292,7 @@ char prompt_token[128];
 #define	CMD_HIJACK		"redir"
 #define CMD_COLOR               "setcolor"
 #define CMD_NOCOLOR             "nocolor"
+#define CMD_TRACE		"trace"
 
 #define CMD_INSERT		"insert"
 #define	CMD_INSERT2		"ins"
@@ -359,9 +361,13 @@ char prompt_token[128];
 #define	CMD_WORKSPACE		 "workspace"
 #define	CMD_WORKSPACE2		 "w"
 
-#ifdef __DEBUG_TEST__
-#define CMD_TEST		 "test"
+/* Mjollnir bindings */
+#if defined(USE_MJOLLNIR)
+#define CMD_ANALYSE		"analyse"
+#define CMD_UNSTRIP		"unstrip"
+#define CMD_RENAME		"rename"
 #endif
+
 
 /* Regx option, a module of struct s_args */
 typedef struct		s_list
@@ -440,6 +446,9 @@ typedef struct		s_e2dbgcontext
 /* The Embedded ELF debugger include file comes here */
 #include <e2dbg.h>
 
+#if defined(USE_MJOLLNIR)
+#include <libmjollnir.h>
+#endif
 
 /* ELFsh module structure */
 typedef struct	      s_module
@@ -466,32 +475,32 @@ typedef struct          s_color
 #define COLOR_NONE         0
 #define COLOR_BOLD         1
 #define COLOR_UNDERLINE    4
-#define COLOR_RESET        160                                                                                                                                       
-#define COLOR_SEPARE       ";"                                                                                                                                       
-                                                                                                                                                                     
+#define COLOR_RESET        160
+#define COLOR_SEPARE       ";"
+
 #define COLOR_TOKENS       50
 #define COLOR_TOKEN_LEN    140
-                                                                                                                                                                     
-#define COLOR_FG_BLACK     30                                                                                                                                        
-#define COLOR_FG_RED       31                                                                                                                                        
-#define COLOR_FG_GREEN     32                                                                                                                                        
-#define COLOR_FG_YELLOW    33                                                                                                                                        
-#define COLOR_FG_BLUE      34                                                                                                                                        
-#define COLOR_FG_MAGENTA   35                                                                                                                                        
-#define COLOR_FG_CYAN      36                                                                                                                                        
-#define COLOR_FG_WHITE     37                                                                                                                                        
-                                                                                                                                                                     
-#define COLOR_BG_BLACK     40                                                                                                                                        
-#define COLOR_BG_RED       41                                                                                                                                        
-#define COLOR_BG_GREEN     42                                                                                                                                        
-#define COLOR_BG_YELLOW    43                                                                                                                                        
-#define COLOR_BG_BLUE      44                                                                                                                                        
-#define COLOR_BG_MAGENTA   45                                                                                                                                        
-#define COLOR_BG_CYAN      46                                                                                                                                        
-#define COLOR_BG_WHITE     47                                                                                                                                        
-  u_int                 fground;                                                                                                                                     
-  u_int                 bground;                                                                                                                                     
-  u_int                 bold;                                                                                                                                        
+
+#define COLOR_FG_BLACK     30
+#define COLOR_FG_RED       31
+#define COLOR_FG_GREEN     32
+#define COLOR_FG_YELLOW    33
+#define COLOR_FG_BLUE      34
+#define COLOR_FG_MAGENTA   35
+#define COLOR_FG_CYAN      36
+#define COLOR_FG_WHITE     37
+
+#define COLOR_BG_BLACK     40
+#define COLOR_BG_RED       41
+#define COLOR_BG_GREEN     42
+#define COLOR_BG_YELLOW    43
+#define COLOR_BG_BLUE      44
+#define COLOR_BG_MAGENTA   45
+#define COLOR_BG_CYAN      46
+#define COLOR_BG_WHITE     47
+  u_int                 fground;
+  u_int                 bground;
+  u_int                 bold;
   u_int                 underline;                                            
   
 }                       color_t;
@@ -587,18 +596,22 @@ typedef struct        s_job
   elfshobj_t          *dbglist;         /* List of objects loaded into e2dbg */
   elfshobj_t          *dbgcurrent;      /* Current working e2dbg file */
   
-  u_char              active;                 
+  u_char              active;            
   time_t              createtime;
   int                 logfd;            /* Log file descriptor */
   elfshscreen_t       screen;           /* Last printed screen */
  
   char		      *oldline;		/* Previous command line */
 
+#if defined(USE_MJOLLNIR)
+  mjrSession		*mjr_session;	/* Context session for mjollnir */
+#endif
+
 #define       ELFSH_JOB_LOGGED (1 << 0)
   u_char              state;            /* Job state flags */
   
   asm_processor*      proc;		/* Processor structure */
-  
+
 }                     elfshjob_t;
 
 
@@ -904,6 +917,7 @@ int		cmd_profile();
 int		cmd_log();
 int		cmd_export();  
 int		cmd_edit();
+int		cmd_trace();
 
 int		cmd_shared();
 int		cmd_cleanup();
@@ -917,12 +931,14 @@ int		vm_add_script_cmd(char *dirstr);
 int		vm_clearscreen(int i, char c);
 int		vm_install_clearscreen();
 
-
 #ifdef __DEBUG_TEST__
 int		cmd_test();
 #endif
 
 int		vm_screen_switch();
+
+FILE		*vm_trace_init(char *tfname, char *rsofname, char *rtfname);
+int		vm_trace_add(FILE *fp, int *argcount, char *func_name);
 
 
 /* Hash functions */
@@ -930,6 +946,12 @@ int           vm_hashunk(int i);
 int           vm_hashbucketprint(int t, int i, int s, char *n, int r, int h, int c);
 int           vm_hashchainprint(int i, int s, char *n, int r, int h);
 
+#if defined(USE_MJOLLNIR)
+/* libmjollnir functions */
+int		cmd_analyse();
+int		cmd_unstrip();
+int 		cmd_rename();
+#endif
 
 /* Debugging functions */
 int		cmd_mode();
@@ -1075,6 +1097,9 @@ int             vm_setvar_long(char *varname, u_long val);
 
 /* Readline stuff (XXX: need to be prefixed) */
 char		**custom_completion(const char* text, int start, int end);
+int		update_col();
+void		*vm_readline_malloc(unsigned int sz);
+void		vm_readline_free(void *ptr);
 
 /* Color functions */
 color_t         *vm_colortable(char *t, char *te);

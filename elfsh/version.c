@@ -178,9 +178,10 @@ int 			cmd_version()
   elfsh_Half		*sym_table;
   elfsh_Sym		*dsym_table;
   void			*sym, *need, *dynsym, *def;
-  u_int			symsize, needsize, dsymsize, defsize;
+  int			symsize, needsize, dsymsize, defsize;
   int			index, knum;
-  u_int			auxid, strindex, nbr;
+  u_int			auxid;
+  int			strindex, nbr;
   char			logbuf[BUFSIZ];
   char	       		*name;
   char		      	*type;
@@ -301,7 +302,7 @@ int 			cmd_version()
   hash_destroy(&t_need);
 
   if (keys != NULL)
-    free(keys);
+    XFREE(keys);
 
   /* free def table */
   keys = hash_get_keys(&t_def, &knum);
@@ -310,7 +311,7 @@ int 			cmd_version()
   hash_destroy(&t_def);
 
   if (keys != NULL)
-    free(keys);
+    XFREE(keys);
 
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
@@ -323,11 +324,11 @@ int 			cmd_verneed()
   elfsh_Vernaux		*tableaux;
   u_int			offset;
   u_int			auxset;
-  u_int			size;
+  int			size;
   u_int			index;
   u_int			aux;
-  u_int			strindex;
-  u_int			nbr;
+  int			strindex;
+  int			nbr;
   char			logbuf[BUFSIZ];
   char			*file;
   char			*auxname;
@@ -436,8 +437,8 @@ int 			cmd_verdef()
   elfsh_Verdef		*table;
   elfsh_Verdaux		*tableaux;
   int			index, offset, num, aux, auxset;
-  u_int			strindex;
-  u_int			nbr;
+  int			strindex;
+  int			nbr;
   char			*auxname;
   char			logbuf[BUFSIZ];
   regex_t		*regx;

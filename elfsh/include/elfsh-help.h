@@ -75,6 +75,7 @@
 #define	HLP_SSTRIP		"Mark the Section Header Table (SHT) and Symbol Table (.symtab) as stripped"
 #define	HLP_RELINJCT		"Relocate a new .o file inside the current file or process"
 #define	HLP_STOP		"Raise a SIGSTOP to the current process"
+#define HLP_TRACE		"Trace functions"
 
 #define HLP_COLOR               "Associates data types to colors \n\n\t"				 \
 				CMD_COLOR" type [bg,fg] color     \n\n\t"				 \
@@ -169,6 +170,12 @@
 #define	HLP_RUN			"Erase existing process by new execution (no fork)"
 #define	HLP_DISPLAY		"List or add displayed commands on breakpoints hits or step"
 #define	HLP_UNDISPLAY		"UNIMPLEMENTED : Remove a display command"
+#define HLP_THREADS		"Print existing threads list or switch to a given thread view"
 
+#if defined(USE_MJOLLNIR)
+#define HLP_ANALYSE		"Analyse the binary (needed for unstrip)"
+#define HLP_UNSTRIP		"Unstrip the binary."
+#define HLP_RENAME		"Symbol rename: rename <old_symbol> <new_symol>"
+#endif
 
 #endif

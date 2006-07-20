@@ -12,10 +12,14 @@
 #if defined(__linux__) || defined (__BEOS__)
  #include <endian.h>
 #elif defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
- #include <machine/endian.h>
+#include <machine/endian.h>
  #define __LITTLE_ENDIAN _LITTLE_ENDIAN
  #define __BIG_ENDIAN    _BIG_ENDIAN
- #define __BYTE_ORDER    BYTE_ORDER
+ #if __FreeBSD__ < 5
+  #define __BYTE_ORDER	  __LITTLE_ENDIAN
+ #else
+  #define __BYTE_ORDER    BYTE_ORDER
+ #endif
 #elif defined(sun)
  #define __LITTLE_ENDIAN 1234
  #define __BIG_ENDIAN	 4321
@@ -76,6 +80,9 @@ typedef char uint8;
 
 /* We need it for .interp fingerprint base */
 #include "libelfsh-hash.h"
+
+/* We need it for modflow/libmjollnir */
+#include "libelfsh-btree.h"
 
 #ifndef swap32
 #define swap32(x)						\
