@@ -27,7 +27,7 @@ void		__elfsh_libc_malloc_pthread_startup(int first_time);
 #define		XALLOC(a, b, c)									\
 do												\
 {												\
-  if ((a = (void *) elfsh_calloc(b, 1)) == NULL)						\
+  if ((a = (void *)elfsh_calloc(b, 1)) == NULL)						\
   {												\
     write(1, "Out of memory\n", 14);								\
     exit(1);											\
@@ -54,7 +54,7 @@ while (0)
 
 
 /* Our free() */
-#define		XFREE(a)	elfsh_free(a)
+#define		XFREE(a)	elfsh_free(a); a = 0
 
 /* Safe open() */
 #define		XOPEN(a, b, c, d, e)							\
@@ -145,7 +145,7 @@ do {						\
            "(%d %d)\n", profileme, elfsh_depth);\
     printf("     Current FUNCTION %s@%s:%d\n",	\
 	   func, file, line);			\
-    exit(0);					\
+  ; \
   }						\
   elfsh_profile_out(file, (char*) func, line);	\
   return;					\
@@ -161,7 +161,7 @@ do {						\
            "(%d %d)\n", profileme, elfsh_depth);\
     printf("     Current FUNCTION %s@%s:%d\n",	\
 	   f, file, l);				\
-    exit(0);					\
+  ; \
   }						\
   elfsh_profile_out(file, (char*) f, l);       	\
   return ret;					\
@@ -177,7 +177,7 @@ do {						\
            "elfsh_depth\n");			\
     printf("     Current FUNCTION %s@%s:%d\n",	\
 	   f, file, l);				\
-    exit(0);					\
+  ; \
   }						\
   elfsh_error_str = m;				\
   elfsh_profile_err(file, (char*) f, l, m);	\

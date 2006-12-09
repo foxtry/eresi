@@ -10,14 +10,14 @@
 /* Commands */
 #define HLP_DISASM		"Disassemble matching binary objects in current file\n\n"         \
 				"disasm parameter\n\n"					          \
-				"Parameter format : regx, regx:rva, regx:rva%%size, regx%%size\n" \
+				"Parameter format : regx, regx:rva, regx:rva%size, regx%size\n" \
 	                        " - regx : Regular expression (mandatory)		\n"       \
 	                        " - rva  : Byte offset from the beginning (optional)    \n"       \
 	                        " - size : Bytes number limit (optional)	      \n\n"       \
 
 #define HLP_HEXA		"Dump matching binary objects in current file\n\n"		  \
 				"X parameter\n\n"					          \
-				"Parameter format : regx, regx:rva, regx:rva%%size, regx%%size\n" \
+				"Parameter format : regx, regx:rva, regx:rva%size, regx%size\n" \
 	                        " - regx : Regular expression (mandatory)		\n"       \
 	                        " - rva  : Byte offset from the beginning (optional)    \n"       \
 	                        " - size : Bytes number limit (optional)	      \n\n"       \
@@ -75,6 +75,7 @@
 #define	HLP_SSTRIP		"Mark the Section Header Table (SHT) and Symbol Table (.symtab) as stripped"
 #define	HLP_RELINJCT		"Relocate a new .o file inside the current file or process"
 #define	HLP_STOP		"Raise a SIGSTOP to the current process"
+#define HLP_TRACE		"Trace functions"
 
 #define HLP_COLOR               "Associates data types to colors \n\n\t"				 \
 				CMD_COLOR" type [bg,fg] color     \n\n\t"				 \
@@ -143,6 +144,7 @@
 #define	HLP_VERB		 "Toggle verbose flag (undo the quiet flag)"
 #define HLP_ALL			 "All prefix : set global regular expression"
 #define	HLP_ALERT		 "Alert prefix : change alert regular expression"
+#define	HLP_FORCE		 "Force sanity checks to be disabled for the command"
 
 /* Interactive only command */
 #define	HLP_LOAD		 "Load a new ELF file"
@@ -169,6 +171,12 @@
 #define	HLP_RUN			"Erase existing process by new execution (no fork)"
 #define	HLP_DISPLAY		"List or add displayed commands on breakpoints hits or step"
 #define	HLP_UNDISPLAY		"UNIMPLEMENTED : Remove a display command"
+#define HLP_THREADS		"Print existing threads list or switch to a given thread view"
 
+#if defined(USE_MJOLLNIR)
+#define HLP_ANALYSE		"Analyse the binary (needed for unstrip)"
+#define HLP_UNSTRIP		"Unstrip the binary."
+#define HLP_RENAME		"Symbol rename: rename <old_symbol> <new_symol>"
+#endif
 
 #endif

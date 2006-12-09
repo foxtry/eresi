@@ -1,88 +1,79 @@
 
 /*
- * (C) 2006 Asgard Labs, thorolf a grid.einherjar.de
+ * (C) 2006 Asgard Labs, thorolf
  * BSD License
- * $Id: libmjollnir.h,v 1.1.1.3 2006-03-04 23:52:54 thor Exp $
+ * $Id: libmjollnir.h,v 1.8 2006-07-27 16:50:48 thor Exp $
  *
  */
 
-#ifndef _LIB_MJR_H_
-#define _LIB_MJR_H_ 1
-
-#include <sys/types.h>
-#include <unistd.h>
 #include <libelfsh.h>
 #include <libasm.h>
 
 /* For fingerprinting */
 #include <openssl/md5.h>
 
-#define BSIZE 4096
+/* size of temp buffers */
+#define BSIZE 4096 
 
-#define MJR_DB_LINE_MAX_LENGTH	1024
-#define MJR_MAX_FNG 1000000
+/* default subroutines prefix */
+#define MJR_CALL_PREFIX		"sub_"
 
-/* Just to prevent allocation of unlimited memmory */
-#define	MAX_FUNCTION_LEN 1024*1024
+typedef struct _mjrSession mjrSession;
+typedef struct _mjrContext mjrContext;
 
-#define	FNG_TYPE_MD5 0
-#define FNG_TYPE_SHA1 1
-#define	FNG_TYPE_CFLOW 2
-#define FNG_TYPE_DFLOW 3
-
-typedef struct _Mjr_fsym Mjr_fsym;
-typedef struct _mjr_ctx Mjr_CTX;
-typedef struct _fingerPrint Mjr_fingerPrint;
-typedef struct _fingerPrintList Mjr_fprintList;
-
-struct _Mjr_fsym {
- u_int vaddr;
- u_int epoint;
- char  *name;
- char  *md5sum;
-#define F_TYPE_CALL 0
-#define F_TYPE_SYSCALL 1
- int   type;
+struct _mjrSession {
+ mjrContext 	*cur;
+ hash_t		ctx;
 };
 
-/**
- * This structure describes an fingerprint
- * in DB
- */
+struct _mjrContext {
 
-struct _fingerPrint {
-  void *data;				/* ptr to fingerprint */
-  u_int arch;				/* architecture */
-  char *os;					/* os */
-  char *rel;				/* os release */
-  char *fname;				/* function name */
-  u_int addtime;			/* time of addition */
-  char *srcFile;			/* source file */
-#define F_FLAG_NONE 0
-#define F_FLAG_VULN 1
-  int flag;					/* flags */
+ elfshobj_t *obj;     		/* elfsh object */
+ asm_processor proc;  		/* proc */
+ u_int curVaddr;      		/* current vaddr (while searching/analizing...) */
+ hash_t blocks;	  		/* blocks */
+ asm_instr  ihist[4]; 		/* instruction history */
+ 
+ /* analysis stuff */
+ unsigned char analysed_calls; 	/* do we analysed it */
+ u_int st_calls_seen;                                                                                                                                              
+ u_int st_calls_found;
+
 };
 
+#include "libmjollnir-blocks.h"
+#include "libmjollnir-int.h"
+#include "libmjollnir-fprint.h"
 
-struct _fingerPrintList {
- Mjr_fingerPrint *cur;
- Mjr_fingerPrint *next;
- Mjr_fingerPrint *prev;
-};
+/* blocks.c */
+mjr_block * mjr_create_block(u_int,char *,u_int);
 
+/* core.c */
+int mjr_analyse(mjrSession *,int);
+int mjr_find_calls(mjrSession *,char *);
 
-struct _mjr_ctx {
- elfshobj_t *obj;			/* elfsh obj */
- asm_processor proc;		/* proc */
- hash_t 	*md5db;			/* md5 db */
- u_int		cvaddr;			/* current vaddr */
- asm_instr  ihist[4];		/* instruction history */
- int		tr_eax,tr_ebx,tr_ecx,tr_edx; /* registers tracking system WIP!*/
- u_int stats_calls_seen;
- u_int stats_calls_found;
-};
+/* dstCall.c */
+int mjr_get_call_dst(mjrSession *,int *);
 
-#include <libmjollnir-int.h>
-#include <libmjollnir-flow.h>
+/* function.c */
+mjrFunction *mjr_function_create(u_int);
+void *mjr_fingerprint_function(mjrSession *, unsigned char *, int );
 
-#endif /* _LIB_MJR_H_ */
+/* history.c */
+int mjr_history_update(mjrSession *, asm_instr);
+
+/* init.c */
+int mjr_init_session(mjrSession *);
+int mjr_create_context_as_current(mjrSession *, elfshobj_t *);
+mjrContext * mjr_create_context(elfshobj_t *);
+int mjr_setup_processor(mjrSession *);
+
+/* internal.c */
+char *_vaddr2string(u_int);
+
+/* symtab.c */
+int mjr_symtab_rebuild(mjrSession *);
+int mjr_symbol_add(mjrSession *, char *, u_int, char *);
+int mjr_symbol_delete_by_name(mjrSession *, char *);
+int mjr_symbol_rename(mjrSession *,char *,char *);
+

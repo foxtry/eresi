@@ -76,8 +76,8 @@ int		vm_display_prompt()
 /* Reset lines counters and ignore output state */
 int		vm_flush()
 {
-  unsigned int  lines = 50;
-  unsigned int  cols = 160;
+  int  lines = 50;
+  int  cols = 160;
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
@@ -143,16 +143,18 @@ int		vm_output(char *str)
   if (world.curjob->io.outcache.nblines < 0)
     {
       vm_flush();
-      world.curjob->io.output("-- press key for more ('q' to quit) --\n");
+      world.curjob->io.output("-- press enter for more ('q/n' to quit / next) --\n");
 
       /* We decided to discard further output (until next vm_flush) */
-      if ((read(world.curjob->io.input_fd, &c, 1) == 1) && c == 'q')
+      if ((read(world.curjob->io.input_fd, &c, 1) == 1) && (c == 'q' || c == 'n'))
 	{
-	  world.curjob->io.outcache.ignore = 1;
+	  if (c == 'q')
+	    world.curjob->io.outcache.ignore = 1;
 	  world.curjob->io.output("\n");
+	  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,  
+			     (c == 'q' ? -1 : -2));
 	}
     }
-
 
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,  ret);
 }
@@ -162,7 +164,7 @@ int		vm_output_nolog(char *str)
 {
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,
-   world.curjob->io.output(str));
+		     world.curjob->io.output(str));
 }
 
 
@@ -170,7 +172,8 @@ int		vm_output_nolog(char *str)
 int		vm_outerr(char *str)
 {
   vm_log(str);
-  fprintf(stderr, str);
+  fprintf(stderr, "%s", str);
+  return (0);
 }
 
 /* Its lighter than flex ... */
@@ -242,17 +245,20 @@ char		**vm_input(int *argc)
 
   /* Save the line for future references */
   if (world.curjob->oldline)
-    XFREE(world.curjob->oldline);
-  world.curjob->oldline = elfsh_strdup(buf);
+    {
+      vm_readline_free(world.curjob->oldline);
+      world.curjob->oldline = NULL;
+    }
+  world.curjob->oldline = vm_readline_malloc(strlen(buf) + 1);
+  strcpy(world.curjob->oldline, buf);
 
   /* Allocate the correct pointer array for argv */
   nbr = vm_findblanks(buf);
-  argv = vm_doargv(nbr, argc, buf);
+  argv = vm_doargv(nbr, (u_int *)argc, buf);
 
   /* Find and replace "\xXX" sequences, then return the array */
   vm_findhex(*argc, argv);
-  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,
-   (argv));
+  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (argv));
 }
 
 
@@ -364,6 +370,13 @@ int		vm_initio()
   world.initial = world.curjob = initial;
   hash_init(&world.jobs, 11);
   hash_add(&world.jobs, "local", initial);
+  hash_init(&initial->loaded, 51);
+  hash_init(&initial->dbgloaded, 11);
+  elfsh_set_color_simple(vm_endline, vm_colorinstr, vm_colorstr, vm_colorfieldstr,
+			 vm_colortypestr, vm_colorend, vm_colorwarn);
+  elfsh_set_color_advanced(vm_coloradv, vm_colorinstr_fmt, vm_coloraddress,
+			   vm_colornumber, vm_colorstr_fmt, vm_colorfieldstr_fmt, 
+			   vm_colortypestr_fmt, vm_colorwarn_fmt);
   ELFSH_NOPROFILE_ROUT(0);
 }
 
@@ -736,8 +749,6 @@ int                     vm_select()
 		      rl_restore_prompt();
 		      ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (0));
                     }
-
-
 #endif
 		  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,(0));
                 }
@@ -751,8 +762,7 @@ int                     vm_select()
               else
                 {
 #if __DEBUG_NETWORK__
-                  fprintf(stderr, "[DEBUG NETWORK] Select broken by"
-			  " a new connexion.\n");
+                  fprintf(stderr, "[DEBUG NETWORK] Select broken by a new connexion.\n");
 #endif
                   // Let's re-select
                   cont = 1;

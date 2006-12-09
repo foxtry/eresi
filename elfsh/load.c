@@ -9,38 +9,42 @@
 /* return 1 if a file named 'name' is in the workspace */
 int		vm_is_loaded(char *name)
 {
+  hashent_t	*actual;
   elfshobj_t	*obj;
+  int		index;
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-
   if (!name)
     ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
-  
   if (!world.curjob)
     ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
-
   if (!world.curjob->current)
     ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 
-  obj = world.curjob->list;
-  while (obj)
-    {
-      if (!strcmp(name, obj->name))
-	ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (1));
-      obj = obj->next;
-    }
+  for (index = 0; index < world.curjob->loaded.size; index++)
+    for (actual = &world.curjob->loaded.ent[index];
+	 actual != NULL && actual->key != NULL;
+	 actual = actual->next)
+      {
+	obj = actual->data;
+	if (!strcmp(name, obj->name))
+	  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (1));
+      }
 
-  obj = world.shared;
-  while (obj)
-    {
-      if (!strcmp(name, obj->name))
-	ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (1));
-      
-      obj = obj->next;
-    }
+  for (index = 0; index < world.shared_hash.size; index++)
+    for (actual = &world.shared_hash.ent[index];
+	 actual != NULL && actual->key != NULL;
+	 actual = actual->next)
+      {
+	obj = actual->data;
+	if (!strcmp(name, obj->name))
+	  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (1));
+      }
+
 
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
+
 
 
 /* Load a file in elfsh */
@@ -93,20 +97,35 @@ int		vm_load_file(char *name, elfsh_Addr base, elfshlinkmap_t *lm)
 
   /* Support shared objects */
   if (world.state.vm_shared)
-    {
-      new->next = world.shared;
-      world.shared = new;
-      world.state.vm_shared = 0;
-    }
+    hash_add(&world.shared_hash, new->name, new);
   else
-    {
-      new->next = world.curjob->list;
-      world.curjob->list = new;
-    }
-
+    hash_add(&world.curjob->loaded, new->name, new);
+    
+#if defined(USE_MJOLLNIR)
+   mjr_create_context_as_current(&world.mjr_session, new);
+   mjr_setup_processor(&world.mjr_session);
+#endif
 
   /* Add an entry into the loaded files hashtable */
   hash_add(&file_hash, new->name, (void *) new);
+
+  /* Init hash dep */
+  hash_init(&new->child_hash, 20);
+  hash_init(&new->root_hash, 20);
+  hash_init(&new->parent_hash, 20);
+
+  /* Load dependances */
+  if (new->hdr->e_type == ET_EXEC)
+    hash_add(&new->root_hash, new->name, new);
+
+  /* We use a different dependences technique for mapped files in the debugger */
+  /* Just load dependences here for unmapped files */
+  if (!elfsh_is_debug_mode())
+    {
+      printf("We are not in debug mode anymore\n");
+      vm_load_enumdep(new);
+    }
+
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
 
@@ -122,6 +141,8 @@ int		cmd_load()
   int		ret; 
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
+
+  tmp = NULL;
 
   if (elfsh_is_debug_mode())
     {
@@ -141,6 +162,11 @@ int		cmd_load()
       str = tmp->immed_val.str;
     }
 
+  if (hash_get(&world.curjob->loaded, str) ||
+      hash_get(&world.shared_hash, str))
+    ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
+		      "Cannot load file many times in the same workspace", (-1));
+
   vm_output("\n");
   ret = vm_load_file(str, NULL, NULL);
   vm_output("\n");
@@ -155,13 +181,16 @@ int		cmd_load()
 		  ", switching to STATIC mode\n\n");
     }
   else 
-      elfsh_set_static_mode();
+    elfsh_set_static_mode();
+
+  world.state.vm_shared = 0;
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (ret));
 
   /* We were not able to resolve the parameter */
  err:
   if (was_dynamic)
     elfsh_set_debug_mode();
+  world.state.vm_shared = 0;
   ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		    "Unknown file to load", (-1));
 }

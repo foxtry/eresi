@@ -26,6 +26,9 @@ int			cmd_flowjack(void)
   unsigned long		new_addr;
   u_int			value;
 
+  elfshobj_t		*file;
+  char			*param;
+
   sect = elfsh_get_section_by_name(world.curjob->current, ".control", 0, 0, 0);
   if (!sect)
     {
@@ -48,7 +51,10 @@ int			cmd_flowjack(void)
     puts(" * .control section already loaded\n");
   blk_list = sect->altdata;
 
-  if ((sym = elfsh_get_metasym_by_name(world.curjob->current, world.curjob->curcmd->param[0])))
+  file  = world.curjob->current;
+  param = world.curjob->curcmd->param[0];
+  sym = elfsh_get_metasym_by_name(file, param);
+  if (sym)
     addr = sym->st_value;
   else
     addr = strtoul(world.curjob->curcmd->param[0], 0, 16);
@@ -92,7 +98,7 @@ int			cmd_flowjack(void)
       elfsh_raw_read(world.curjob->current, 
 		     elfsh_get_foffset_from_vaddr(world.curjob->current, cal->vaddr),
 		     buffer, to_hijack->size - (cal->vaddr - to_hijack->vaddr));
-      asm_read_instr(&ins, buffer, 
+      asm_read_instr(&ins, (u_char *)buffer, 
 		     to_hijack->size - (cal->vaddr - to_hijack->vaddr),
 		     &world.proc);
       puts(" * would patch -> ");

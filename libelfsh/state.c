@@ -43,6 +43,8 @@ void	elfsh_set_debug_mode()
 
 void	elfsh_set_mode(u_char mode)
 {
+  //fprintf(stderr, "Changed for %s mode ! \n",
+  //(mode == LIBELFSH_MODE_STATIC ? "static" : "dynamic"));
   dbgworld.mode = mode;
 }
 
@@ -98,4 +100,41 @@ void	elfsh_set_profile(int (*profile)(char *), int (*profile_err)(char *))
   dbgworld.profile = profile;
   dbgworld.profile_err = profile_err;
 
+}
+
+/* We setup two functions for colors because we have too many functions */
+
+/* Change simple color functions */
+void	elfsh_set_color_simple(void (*endline)(), char *(*colorinstr)(char *text),
+			       char *(*colorstr)(char *t), char *(*colorfieldstr)(char *t),
+			       char *(*colortypestr)(char *t), char *(*colorend)(char *text),
+			       char *(*colorwarn)(char *text))
+{
+  dbgworld.endline = endline;
+  dbgworld.colorinstr = colorinstr;
+  dbgworld.colorstr = colorstr;
+  dbgworld.colorfieldstr = colorfieldstr;
+  dbgworld.colortypestr = colortypestr;
+  dbgworld.colorend = colorend;
+  dbgworld.colorwarn = colorwarn;
+}
+
+/* Change advanced color functions */
+void	elfsh_set_color_advanced(char *(*coloradv)(char *ty, char *p, char *te),
+				 char *(*colorinstr_fmt)(char* p, char *t),
+				 char *(*coloraddress)(char *p, elfsh_Addr a),
+				 char *(*colornumber)(char *p, u_int n),
+				 char *(*colorstr_fmt)(char *p, char *t),
+				 char *(*colorfieldstr_fmt)(char *p, char *t),
+				 char *(*colortypestr_fmt)(char *p, char *t),
+				 char *(*colorwarn_fmt)(char *pattern, char *text))
+{
+  dbgworld.coloradv = coloradv;
+  dbgworld.colorinstr_fmt = colorinstr_fmt;
+  dbgworld.coloraddress = coloraddress;
+  dbgworld.colornumber = colornumber;
+  dbgworld.colorstr_fmt = colorstr_fmt;
+  dbgworld.colorfieldstr_fmt = colorfieldstr_fmt;
+  dbgworld.colortypestr_fmt = colortypestr_fmt;
+  dbgworld.colorwarn_fmt = colorwarn_fmt;
 }

@@ -144,15 +144,7 @@ int		elfsh_relink_plt(elfshobj_t *file, u_int mod)
   /* FreeBSD and BeoS is incompatible with pre-interp injection */
   /* Solaris needs self-mutating code for ALTPLT technique */
   /* %gp offsets on ALPHA/MIPS requires data injection */
-  if (ostype == ELFSH_OS_FREEBSD || 
-      ostype == ELFSH_OS_BEOS    || 
-      ostype == ELFSH_OS_SOLARIS ||
-      FILE_IS_ALPHA64(file)      ||
-      FILE_IS_MIPS(file)	 ||
-      FILE_IS_SPARC(file))
-    mode = ELFSH_DATA_INJECTION;
-  else
-    mode = ELFSH_CODE_INJECTION;
+  ELFSH_SELECT_INJECTION(file,NULL,mode);
 
   /* Map .alt.plt.prolog on ALPHA, or .alt.got.prolog on MIPS */
   if (FILE_IS_MIPS(file) || FILE_IS_ALPHA64(file))
@@ -292,13 +284,21 @@ int		elfsh_relink_plt(elfshobj_t *file, u_int mod)
 				   dynsym->shdr->sh_size / sizeof(elfsh_Sym),
 				   plt->shdr->sh_addr + off, 
 				   NULL, ELFSH_EXACTSYM);
-				   
 
       /* New versions of ld do not fill the vaddr of dynamic symbols,
 	 do it ourself. Do not insert old symbol in emergency cases */
-      if (sym == NULL && 
-	  (sym = elfsh_restore_dynsym(file, plt, off, dynsym)) == NULL)
-	continue;
+      if (sym == NULL)
+      {
+	  if ((sym = elfsh_restore_dynsym(file, plt, off, dynsym)) == NULL)
+	      continue;
+
+	  name = elfsh_get_dynsymbol_name(file, sym);
+	  
+	  /* __gmon_start__ should not be resolved 
+	     if it was not already done by gcc */
+	  if (name && !strcmp(name, "__gmon_start__"))
+	      sym->st_value = 0x0;
+      }
       
       /* ... and we inject the 'old' occurence symbol pointing in 
 	 .alt.plt (.plt on MIPS) */

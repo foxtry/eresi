@@ -51,6 +51,11 @@ hash_t          fg_color_hash;
 hash_t          bg_color_hash;
 hash_t          t_color_hash;
 
+/* Trace hash */
+hash_t		trace_cmd_hash;
+
+/* Lib path store variable */
+char	       elfsh_libpath[BUFSIZ];
 
 /* Fill all the Level 1 Objects hash tables */
 static void	setup_L1hash()
@@ -787,10 +792,12 @@ static void	setup_cmdhash()
   vm_addcmd(CMD_SHTRM   , (void *) cmd_shtrm   , (void *) NULL            , 1, HLP_SHTRM);
   vm_addcmd(CMD_QUIET   , (void *) cmd_quiet   , (void *) NULL            , 0, HLP_QUIET);
   vm_addcmd(CMD_QUIET2  , (void *) cmd_quiet   , (void *) NULL            , 0, HLP_QUIET);
+  vm_addcmd(CMD_FORCE   , (void *) cmd_force   , (void *) NULL            , 0, HLP_FORCE);
   vm_addcmd(CMD_VERB    , (void *) cmd_verb    , (void *) NULL            , 0, HLP_VERB);
   vm_addcmd(CMD_VERB2   , (void *) cmd_verb    , (void *) NULL            , 0, HLP_VERB);
   vm_addcmd(CMD_SORT    , (void *) cmd_sort    , (void *) vm_getoption    , 0, HLP_SORT);
   vm_addcmd(CMD_SORT2   , (void *) cmd_sort    , (void *) vm_getoption    , 0, HLP_SORT);
+  vm_addcmd(CMD_TRACE   , (void *) cmd_trace   , (void *) vm_getvarparams , 0, HLP_TRACE);
 
   vm_addcmd(CMD_ALL	, (void *) cmd_glregx  , (void *) vm_getoption    , 0, HLP_ALL);
   vm_addcmd(CMD_ALL2	, (void *) cmd_glregx  , (void *) vm_getoption    , 0, HLP_ALL);
@@ -839,10 +846,6 @@ static void	setup_cmdhash()
   vm_addcmd(CMD_VERDEF  , (void *) cmd_verdef  , (void *) vm_getregxoption , 1, HLP_VERDEF);
   vm_addcmd(CMD_HASH    , (void *) cmd_hashx   , (void *) vm_getregxoption, 0, HLP_HASH);
 
-#ifdef __DEBUG_TEST__
-  vm_addcmd(CMD_TEST   , (void *) cmd_test  , (void *) NULL         , 0, "Test command");
-#endif 
-
 #if defined(ELFSHNET)
   vm_addcmd(CMD_NETWORK   , (void *) cmd_network  , (void *) NULL            , 0, HLP_NETWORK);
   vm_addcmd(CMD_NETWORK2  , (void *) cmd_network  , (void *) NULL            , 0, HLP_NETWORK);
@@ -853,7 +856,42 @@ static void	setup_cmdhash()
   vm_addcmd(CMD_DISCON    , (void *) cmd_discon   , (void *) vm_getoption    , 0, HLP_DISCON);
   vm_addcmd(CMD_RCMD	  , (void *) cmd_rcmd     , (void *) vm_getvarparams , 0, HLP_RCMD);
 #endif
+
+#if defined(USE_MJOLLNIR)
+  vm_addcmd(CMD_ANALYSE	  , (void *) cmd_analyse  , (void *) NULL	     , 0, HLP_ANALYSE);
+  vm_addcmd(CMD_UNSTRIP	  , (void *) cmd_unstrip  , (void *) NULL	     , 0, HLP_UNSTRIP);
+  vm_addcmd(CMD_RENAME	  , (void *) cmd_rename  , (void *) vm_getvarparams , 2, HLP_RENAME);
+#endif
   
+}
+
+/* Mix default library path with LD_LIBRARY_PATH variable */
+static char	*get_libpath()
+{
+  int		len;
+  char		*ldenv;
+
+  /* Set default value */
+  strncpy(elfsh_libpath, ELFSH_LIBPATH, BUFSIZ);
+  elfsh_libpath[BUFSIZ - 1] = '\0';
+
+  len = strlen(elfsh_libpath);
+
+  ldenv = getenv("LD_LIBRARY_PATH");
+
+  /* Check if we use LD_LIBRARY_PATH */
+  if (ldenv != NULL && len+strlen(ldenv)+2 < BUFSIZ)
+    {
+      /* We separate each path with ; */
+      if (ldenv[0] != ';' && elfsh_libpath[len - 1] != ';')
+	  strcat(elfsh_libpath, ";");
+      else if (ldenv[0] == ';' && elfsh_libpath[len - 1] == ';')
+	  ldenv++;
+
+      strcat(elfsh_libpath, ldenv);
+    }
+
+  return elfsh_libpath;
 }
 
 
@@ -868,12 +906,14 @@ static void	setup_varshash()
   elfshpath_t	*r;
   elfshpath_t	*s;
   elfshpath_t	*e;
+  elfshpath_t	*l;
 
   f = vm_create_IMMED(ELFSH_OBJINT, 1, 0);
   g = vm_create_IMMED(ELFSH_OBJINT, 1, 0);
   r = vm_create_IMMED(ELFSH_OBJINT, 1, 0xFFFFFFFF);
   s = vm_create_IMMEDSTR(1, ELFSH_SHELL);
   e = vm_create_IMMEDSTR(1, ELFSH_EDITOR);
+  l = vm_create_IMMEDSTR(1, get_libpath());
 
   hash_init(&vars_hash, 251);
   hash_add(&vars_hash, ELFSH_RESVAR, f);
@@ -881,6 +921,7 @@ static void	setup_varshash()
   hash_add(&vars_hash, ELFSH_ERRVAR, r);
   hash_add(&vars_hash, ELFSH_SHELLVAR, s);
   hash_add(&vars_hash, ELFSH_EDITVAR, e);
+  hash_add(&vars_hash, ELFSH_LIBPATHVAR, l);
 }
 
 
@@ -1021,6 +1062,21 @@ void setup_color_type()
   hash_add(&t_color_hash, "pedition"   , (void *) vm_colorblank());
   hash_add(&t_color_hash, "instr"      , (void *) vm_colorblank());
 }
+
+
+/* Setup all used sub functions */
+void setup_trace_table()
+{
+  trace_addcmd("add", 		(void *) trace_add, 	2, 1);
+  trace_addcmd("rm",		(void *) trace_rm,     	2, 1);
+  trace_addcmd("enable",	(void *) trace_enable,	2, 1);
+  trace_addcmd("disable",	(void *) trace_disable,	2, 1);
+  trace_addcmd("create",	(void *) trace_create,	2, 1);
+  trace_addcmd("delete",	(void *) trace_delete,	2, 0);
+  trace_addcmd("flush",		(void *) trace_flush,	2, 0);
+  trace_addcmd("list",		(void *) trace_list,	0, 0);
+}
+
    
 /* Setup all hash tables */
 void		vm_setup_hashtables()
@@ -1035,9 +1091,11 @@ void		vm_setup_hashtables()
   hash_init(&mod_hash, 51);
   hash_init(&labels_hash[0], 51);
   hash_init(&e2dbgworld.bp, 51);
-  hash_init(&fg_color_hash, 12);
-  hash_init(&bg_color_hash, 12);
-  hash_init(&t_color_hash, 6);
+  hash_init(&fg_color_hash, 13);
+  hash_init(&bg_color_hash, 13);
+  hash_init(&t_color_hash, 11);
+  hash_init(&trace_cmd_hash, 11);
+  hash_init(&world.shared_hash, 11);
   setup_varshash();
   setup_cmdhash();
   setup_consthash();
@@ -1045,4 +1103,5 @@ void		vm_setup_hashtables()
   setup_L2hash();
   setup_color();
   setup_color_type();
+  setup_trace_table();
 }
