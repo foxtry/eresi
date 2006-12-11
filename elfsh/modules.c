@@ -22,11 +22,6 @@ int		cmd_modload()
       snprintf(buf, sizeof(buf), "%s%s", ELFSH_MODPATH, world.curjob->curcmd->param[0]);
       if (access(buf, R_OK) != 0)
 	{
-
-
-	  //fprintf(stderr, "Failed to load %s, trying to load next match .. \n", buf);
-
-
 	  snprintf(buf, sizeof(buf), "%s%s.so",
 		   ELFSH_MODPATH, world.curjob->curcmd->param[0]);
 	  if (access(buf, R_OK) != 0)
@@ -50,7 +45,6 @@ int		cmd_modload()
   new->handler = load_add_on(name);
   if (new->handler == B_ERROR)
 #else
-  fprintf(stderr, "name : %s\n",name);
   new->handler = dlopen(name, RTLD_NOW);
   if (new->handler == NULL)
 #endif
@@ -214,28 +208,32 @@ int		vm_modlist()
 
 
 /* In case linked in static */
-#if USE_STATIC
+#if USE_STATIC && !defined(__FreeBSD__)
 
 void * dlopen(const char *pathname, int mode)
 {
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
   ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		    "DLOPEN unavailable in static built", (NULL));
 }
 
 void *dlsym(void *handle, const char *name)
 {
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
   ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		    "DLSYM unavailable in static built", (NULL));
 }
 
 int dlclose(void *handle)
 {
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
   ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		    "DLCLOSE unavailable in static built", (1));
 }
 
 char *dlerror(void)
 {
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
   ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		    "DLERROR unavailable in static built", (NULL));
 }

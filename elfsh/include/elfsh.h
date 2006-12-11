@@ -7,7 +7,7 @@
  #define __ELFSH_H_
 
 /* User defined configuration */
-#include "../../vars.h"
+#include "elfsh-vars.h"
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -47,6 +47,7 @@
 #include <pthread.h>
 
 #include <libelfsh.h>
+#include <libui.h>
 
 #if defined(ELFSHNET)
  #include <libdump.h>
@@ -76,6 +77,8 @@ extern asm_processor	proc;
 #define __DEBUG_RESOLVE__	0
 #define __DEBUG_HIJACK__	0
 #define __DEBUG_TEST__		0
+#define __DEBUG_TRACE__		0
+#define	__DEBUG_GRAPH__		0
 
 /* Network related defines */
 #define ELFSH_PORT		4444
@@ -105,6 +108,7 @@ extern asm_processor	proc;
 #define	ELFSH_ERRVAR		"ERR"
 #define	ELFSH_SHELLVAR		"SHELL"
 #define	ELFSH_EDITVAR		"EDITOR"
+#define ELFSH_LIBPATHVAR	"LPATH"
 
 /* ELF Versions */
 #define ELFSH_VERTYPE_NONE    0
@@ -170,9 +174,9 @@ extern asm_processor	proc;
 
 char prompt_token[128];
 #define ELFSH_SNAME		"elfsh"
-#define	ELFSH_VERSION		"0.7"
-#define	ELFSH_RELEASE		"a7p3rc2"
-#define ELFSH_EDITION		"brz"
+#define	ELFSH_VERSION		"0.72"
+#define	ELFSH_RELEASE		"a1"
+#define ELFSH_EDITION		"dev"
 
 /* Unused, feel free to try it, its awesome */
 #define ELFSH_CIRCUS_PROMPT	"\033[00;01;30m(" \
@@ -215,6 +219,25 @@ char prompt_token[128];
 #define	ELFSH_FINI		"elfsh_fini"
 #define ELFSH_HELP		"elfsh_help"
 
+/* XXX: To merge in libui */
+#define GVZ_COLOR_BLUE  "\"blue\""
+#define GVZ_COLOR_CORAL "\"coral\""
+#define	GVZ_COLOR_CYAN	"\"cyan\""
+#define GVZ_COLOR_RED	"\"red\""
+#define GVZ_COLOR_GREEN	"\"green\""
+#define GVZ_COLOR_BLACK	"\"black\""
+
+#define BLK_COLOR_FUNC	GVZ_COLOR_GREEN
+#define BLK_COLOR_NORM	GVZ_COLOR_CYAN
+#define BLK_COLOR_RET	GVZ_COLOR_CORAL
+
+#define BLK_COLOR_TRUE	GVZ_COLOR_GREEN
+#define BLK_COLOR_FALSE	GVZ_COLOR_RED
+#define BLK_COLOR_CONT	GVZ_COLOR_BLACK
+#define BLK_COLOR_CALL	GVZ_COLOR_BLUE
+#define BLK_COLOR_JUMP	GVZ_COLOR_BLACK
+/* END XXX */
+
 /* For elfsh/elfsh/disasm.c:display_object() */
 #define	ELFSH_HEXA_VIEW		0
 #define	ELFSH_DISASM_VIEW	1
@@ -225,6 +248,11 @@ char prompt_token[128];
 /* Return of an input function in case of ignorable input */
 #define ELFSH_VOID_INPUT -1
 #define ELFSH_EXIT_INPUT -2
+
+/* ELFsh actions, for parametrizing some function behaviors */
+#define	ELFSH_MERGE		(1 << 0)
+#define	ELFSH_UNMERGE		(1 << 1)
+#define	ELFSH_NEWID		(1 << 2)
 
 /* Commands */
 #define CMD_DISASM		"disasm"
@@ -291,6 +319,7 @@ char prompt_token[128];
 #define	CMD_HIJACK		"redir"
 #define CMD_COLOR               "setcolor"
 #define CMD_NOCOLOR             "nocolor"
+#define CMD_TRACE		"trace"
 
 #define CMD_INSERT		"insert"
 #define	CMD_INSERT2		"ins"
@@ -346,6 +375,7 @@ char prompt_token[128];
 #define CMD_ALL			 "all"
 #define CMD_ALL2		 "a"
 #define	CMD_ALERT		 "alert"
+#define	CMD_FORCE		 "force"
 
 /* Interactive only command */
 #define	CMD_LOAD		 "load"
@@ -359,9 +389,23 @@ char prompt_token[128];
 #define	CMD_WORKSPACE		 "workspace"
 #define	CMD_WORKSPACE2		 "w"
 
-#ifdef __DEBUG_TEST__
-#define CMD_TEST		 "test"
-#endif
+/* Code analysis commands */
+#define CMD_FLOWJACK		"flowjack"
+#define	CMD_GRAPH		"graph"
+#define CMD_FLOW		"flow"    // duplicate
+#define CMD_INSPECT		"inspect"
+#define CMD_FLOWLOAD		"flowload"
+#define CMD_FLOWSAVE		"flowsave"
+#define	CMD_FLOWTEST		"flowtest"
+#define CMD_ADDGOTO		"addgoto"
+
+#define	CMD_SETFCTPTR		"setfuncptr"
+#define	CMD_USEGOTO		"usegoto"
+
+#define	CMD_SETGVL		"setgvl"
+#define CMD_ANALYSE		"analyse" // duplicate
+#define CMD_UNSTRIP		"unstrip"
+#define CMD_RENAME		"rename"
 
 /* Regx option, a module of struct s_args */
 typedef struct		s_list
@@ -411,6 +455,7 @@ typedef struct		s_args
 }			elfshargv_t;
 
 /* Take a elfshargv_t and fill its argc field */
+/* Only used when the command is unknown (module) and tries to be determined */
 #define		ELFSH_CMDARGS_COUNT(cmd)	\
 do						\
 {						\
@@ -439,7 +484,7 @@ typedef struct		s_e2dbgcontext
 
 /* The Embedded ELF debugger include file comes here */
 #include <e2dbg.h>
-
+#include <libmjollnir.h>
 
 /* ELFsh module structure */
 typedef struct	      s_module
@@ -457,46 +502,6 @@ typedef struct	      s_module
   time_t              loadtime;       /* Load time stamp */
   struct s_module     *next;          /* Next module of the list */
 }                     elfshmod_t;
-
-
-  /* ELFsh color structure */
-typedef struct          s_color
-{
-
-#define COLOR_NONE         0
-#define COLOR_BOLD         1
-#define COLOR_UNDERLINE    4
-#define COLOR_RESET        160                                                                                                                                       
-#define COLOR_SEPARE       ";"                                                                                                                                       
-                                                                                                                                                                     
-#define COLOR_TOKENS       50
-#define COLOR_TOKEN_LEN    140
-                                                                                                                                                                     
-#define COLOR_FG_BLACK     30                                                                                                                                        
-#define COLOR_FG_RED       31                                                                                                                                        
-#define COLOR_FG_GREEN     32                                                                                                                                        
-#define COLOR_FG_YELLOW    33                                                                                                                                        
-#define COLOR_FG_BLUE      34                                                                                                                                        
-#define COLOR_FG_MAGENTA   35                                                                                                                                        
-#define COLOR_FG_CYAN      36                                                                                                                                        
-#define COLOR_FG_WHITE     37                                                                                                                                        
-                                                                                                                                                                     
-#define COLOR_BG_BLACK     40                                                                                                                                        
-#define COLOR_BG_RED       41                                                                                                                                        
-#define COLOR_BG_GREEN     42                                                                                                                                        
-#define COLOR_BG_YELLOW    43                                                                                                                                        
-#define COLOR_BG_BLUE      44                                                                                                                                        
-#define COLOR_BG_MAGENTA   45                                                                                                                                        
-#define COLOR_BG_CYAN      46                                                                                                                                        
-#define COLOR_BG_WHITE     47                                                                                                                                        
-  u_int                 fground;                                                                                                                                     
-  u_int                 bground;                                                                                                                                     
-  u_int                 bold;                                                                                                                                        
-  u_int                 underline;                                            
-  
-}                       color_t;
-
-extern u_int		nocolor;
 
 /* Elfsh Output Caching structure */
 typedef struct          s_elfsh_outbuf
@@ -525,14 +530,13 @@ typedef struct           s_elfsh_io
   
   /* dump specific */
 #if defined(ELFSHNET)
-  pkt_t       *pkt;                   /* dump received pkt */
+  pkt_t        *pkt;                   /* dump received pkt */
 #endif
-  int          new;                   /* 0 if already used */
+  int           new;                   /* 0 if already used */
 #if defined(USE_READLN)
-  char         *buf;                  /* readline line */
+  char	        *buf;                  /* readline line */
 #endif
-  
-  elfshoutbuf_t       outcache;
+  elfshoutbuf_t	outcache;
 }                     elfshio_t;
 
 
@@ -569,7 +573,6 @@ typedef struct        s_screen
 /* ELFsh job structure, one per client */
 typedef struct        s_job
 {
-  
 #define       ELFSH_INPUT     0
 #define       ELFSH_OUTPUT    1
   elfshio_t           io;		 /* Current IO for this job */
@@ -578,27 +581,23 @@ typedef struct        s_job
 #define		      ELFSH_MAX_SOURCE_DEPTH  10
   elfshargv_t	      *script[ELFSH_MAX_SOURCE_DEPTH]; /* List of script commands */
   elfshargv_t         *lstcmd[ELFSH_MAX_SOURCE_DEPTH]; /* Last command for each depth */
-  u_int               sourced;                         /* script depth (if beeing sourced) */ 
-  
+  u_int               sourced;                         /* script depth (if beeing sourced) */
   elfshargv_t	      *curcmd;          /* Next command to be executed */
-  elfshobj_t          *list;            /* List of loaded ELF objects */
-  elfshobj_t          *current;         /* Current working ELF object */
 
-  elfshobj_t          *dbglist;         /* List of objects loaded into e2dbg */
+  hash_t              loaded;           /* List of loaded ELF objects */
+  elfshobj_t          *current;         /* Current working ELF object */
+  hash_t              dbgloaded;        /* List of objects loaded into e2dbg */
   elfshobj_t          *dbgcurrent;      /* Current working e2dbg file */
   
-  u_char              active;                 
+  u_char              active;            
   time_t              createtime;
   int                 logfd;            /* Log file descriptor */
   elfshscreen_t       screen;           /* Last printed screen */
- 
   char		      *oldline;		/* Previous command line */
 
 #define       ELFSH_JOB_LOGGED (1 << 0)
   u_char              state;            /* Job state flags */
-  
   asm_processor*      proc;		/* Processor structure */
-  
 }                     elfshjob_t;
 
 
@@ -606,6 +605,8 @@ typedef struct        s_job
 typedef struct        s_state
 {
   char                vm_quiet;       /* Quiet mode : 0 or 1 */
+  char		      vm_gvl;	      /* Graph verbose level : 0 or 1 */
+  char                vm_force;       /* Force mode : 0 or 1 */
   char                vm_use_regx;    /* Is a global regx available ? */
   regex_t	      vm_regx;        /* Global regx */
   char                *vm_sregx;      /* Global regx in string format */
@@ -645,10 +646,11 @@ typedef struct        s_elfsh_world
   hash_t	      jobs;           /* Hash table of jobs */
   elfshjob_t	      *initial;       /* Main initial job */
   elfshjob_t	      *curjob;        /* Current job */
-  elfshobj_t	      *shared;        /* List of shared descriptors */
+  hash_t	      shared_hash;    /* Hash of shared descriptors */
   char                *scriptsdir;    /* Directory which contains script commands */
   asm_processor       proc;           /* Libasm world */
-  asm_processor	      proc_sparc;     /* Libasm Sparc */	
+  asm_processor	      proc_sparc;     /* Libasm Sparc */
+  mjrsession_t        mjr_session;    /* Session holding contexts for mjollnir */
   e2dbgworld_t        e2dbg;          /* Debugger world */
 }		      elfshworld_t;
 
@@ -736,6 +738,21 @@ typedef struct        s_L1handler
 
 }		elfshL1_t;
 
+/* Trace structures */
+typedef struct 	s_elfshtracecmd
+{
+  int 		(*exec)(char *name, char *optarg);	/* Function used */
+
+  /* Code for this options:
+  ** 0: doesn't exist
+  ** 1: optional
+  ** 2: needed
+  */
+  char		flagName;	/* Need a first argument */
+  char		flagArg;       	/* Need a second argument */
+}		elfshtracecmd_t;
+
+
 #if defined(USE_READLN)
 extern rl_command_func_t *rl_ctrll;
 #endif
@@ -775,9 +792,12 @@ extern hash_t		vern_L2_hash;   /* For .gnu.version_r */
 extern hash_t		hashb_L2_hash;  /* For .hash (bucket) */
 extern hash_t		hashc_L2_hash;  /* For .hash (chain) */
 
-extern hash_t           bg_color_hash;   /* colors def */
-extern hash_t           fg_color_hash;   /* colors def */
-extern hash_t           t_color_hash;    /* colors type */
+extern hash_t           bg_color_hash; 	/* colors def */
+extern hash_t           fg_color_hash; 	/* colors def */
+extern hash_t           t_color_hash;  	/* colors type */
+
+extern hash_t		trace_cmd_hash;	/* trace cmd table */
+extern hash_t		goto_hash;	/* goto hash */
 
 /* Lattice for I/O */
 extern char		*(*hooks_input[ELFSH_IONUM])();
@@ -808,12 +828,15 @@ extern elfshconst_t     elfsh_rel_type_sparc[ELFSH_RELOC_SPARC64_MAX];
 extern elfshconst_t     elfsh_rel_type_alpha[ELFSH_RELOC_ALPHA_MAX];
 extern elfshconst_t     elfsh_rel_type_mips[ELFSH_RELOC_MIPS_MAX];
 
-extern elfshconst_t   elfsh_verentry_type[ELFSH_VERENTRY_MAX];
+extern elfshconst_t     elfsh_verentry_type[ELFSH_VERENTRY_MAX];
 
 /* Network related variables */
 //extern hash_t      elfsh_net_client_list;  /* The client socket's list */
 extern int         elfsh_net_client_count; /* Number of clients connected */
 //extern elfshsock_t    elfsh_net_serv_sock;    /* The main socket structur */
+
+/* Lib path */
+extern char		elfsh_libpath[BUFSIZ];
 
 /* Commands execution handlers, each in their respective file */
 int		cmd_dyn();
@@ -860,6 +883,7 @@ int		cmd_append();
 int		cmd_extend();
 int		cmd_fixup();
 int		cmd_quiet();
+int             cmd_force();
 int		cmd_verb();
 int		cmd_exec();
 int		cmd_findrel();
@@ -904,32 +928,32 @@ int		cmd_profile();
 int		cmd_log();
 int		cmd_export();  
 int		cmd_edit();
-
+int		cmd_trace();
 int		cmd_shared();
 int		cmd_cleanup();
-
 int             cmd_verneed();
 int             cmd_verdef();
 int             cmd_version();
 int             cmd_hashx();
 
-int		vm_add_script_cmd(char *dirstr);
-int		vm_clearscreen(int i, char c);
-int		vm_install_clearscreen();
 
+/* Flow analysis commands */
+int		cmd_flowload(void);
+int		cmd_flowsave(void);
+int		cmd_graph(void);
+int		cmd_inspect(void);
+int		cmd_flow(void);
+int		cmd_testflow(void);
+int		cmd_flowjack(void);
+int		cmd_addgoto(void);
+int		cmd_setgvl(void);
+int		cmd_analyse();
+int		cmd_unstrip();
+int 		cmd_rename();
 
 #ifdef __DEBUG_TEST__
 int		cmd_test();
 #endif
-
-int		vm_screen_switch();
-
-
-/* Hash functions */
-int           vm_hashunk(int i);
-int           vm_hashbucketprint(int t, int i, int s, char *n, int r, int h, int c);
-int           vm_hashchainprint(int i, int s, char *n, int r, int h);
-
 
 /* Debugging functions */
 int		cmd_mode();
@@ -957,10 +981,8 @@ int		vm_gethexa(u_int index, u_int argc, char **argv);
 int		vm_getvarparams(u_int index, u_int argc, char **argv);
 
 /* Libasm resolve handlers */
-void		do_resolve(void *data, u_int vaddr, char *, u_int);
-u_int		display_instr(int, u_int, u_int, u_int, u_int,
-			      char *, u_int, char *, char *, u_int *);
-char		*vm_resolve(elfshobj_t *file, elfsh_Addr addr, elfsh_SAddr *roffset);
+void		asm_do_resolve(void *data, u_int vaddr, char *, u_int);
+char		*vm_resolve(elfshobj_t *file, elfsh_Addr addr, elfsh_SAddr *roff);
 
 /* General VM functions */
 elfshpath_t	*vm_lookup_param(char *param, u_int mode);
@@ -997,6 +1019,16 @@ int             vm_version_pneed(hashneed_t *p, u_int ai, u_int i, char *id,
 				 char *n, char *t, regex_t *r);
 int             vm_version_unk(u_int ai, u_int i, char *id, char *n, char *t);
 
+/* Disassembling and hexadecimal view functions */
+u_int		vm_display_instr(int, u_int, u_int, u_int, u_int,
+				 char *, u_int, char *);
+int		vm_display_section(elfshsect_t *s, char *name, elfshlist_t *re);
+int		vm_match_sht(elfshobj_t *file, elfshsect_t *l, elfshlist_t *actual);
+int		vm_match_symtab(elfshobj_t *file, elfshsect_t *symtab, 
+				elfshlist_t *actual, int flag);
+int		vm_match_special(elfshobj_t *file, elfsh_Addr vaddr,
+				 elfshlist_t *actual);
+
 /* Parsing, Scanning, I/O functions */
 char		*vm_filter_param(char *buf, char *ptr);
 char		*vm_build_unknown(char *buf, const char *str, u_long type);
@@ -1024,16 +1056,32 @@ char		*vm_get_string(char **params);
 void		vm_log(char *str);
 int             vm_closelog();
 
+/* Trace functions */
+FILE		  *vm_trace_init(char *tfname, char *rsofname, char *rtfname);
+int		  vm_trace_add(FILE *fp, int *argcount, char *func_name);
+int 	          trace_addcmd(char *cmd, void *exec, char flagName, char flagArg);
+int		  trace_add(const char *name, const char *optarg);
+int		  trace_rm(const char *name, const char *optarg);
+int		  trace_enable(const char *name, const char *optarg);
+int		  trace_disable(const char *name, const char *optarg);
+int		  trace_create(const char *name, const char *optarg);
+int		  trace_delete(const char *name, const char *optarg);
+int		  trace_flush(const char *name, const char *optarg);
+int		  trace_list(const char *name, const char *optarg);
+
+/* Hash functions */
+int             vm_hashunk(int i);
+int             vm_hashbucketprint(int, int, int, char *, int, int, int);
+int             vm_hashchainprint(int i, int s, char *n, int r, int h);
+
 /* Internal functions */
 elfshmod_t	*vm_modprobe();
 void		vm_setup_hashtables();
-
 int		vm_doerror(void (*fct)(char *str), char *str);
 void		vm_error(char *label, char *param);
 void		vm_badparam(char *str);
 void		vm_unknown(char *str);
 void		vm_exit(int err);
-
 void		vm_print_banner();
 void		vm_dynentinfo(elfshobj_t *f, elfsh_Dyn *ent, char *info);
 int		vm_usage(char *str);
@@ -1049,6 +1097,15 @@ int		vm_load_file(char *name, elfsh_Addr base, elfshlinkmap_t *lm);
 int		vm_is_loaded(char *name);
 int		vm_doswitch(int nbr);
 
+/* Dependences related information : deps.c */
+int		vm_load_enumdep(elfshobj_t *obj);
+int		vm_load_dep(elfshobj_t *p, char *n, elfsh_Addr b, elfshlinkmap_t *);
+char	     	*vm_load_searchlib(char *name);
+elfshobj_t	*vm_is_dep(elfshobj_t *obj, char *path);
+elfshobj_t	*vm_is_depid(elfshobj_t *obj, int id);
+int		vm_unload_dep(elfshobj_t *obj, elfshobj_t *root);
+
+/* Top skeleton functions */
 int		vm_init() __attribute__((constructor)) ;
 int		vm_loop(int argc, char **argv);
 int		vm_setup(int ac, char **av);
@@ -1072,43 +1129,22 @@ int             vm_setvar_short(char *varname, u_short val);
 int             vm_setvar_int(char *varname, u_int val);
 int             vm_setvar_long(char *varname, u_long val);
 
-
 /* Readline stuff (XXX: need to be prefixed) */
 char		**custom_completion(const char* text, int start, int end);
-
-/* Color functions */
-color_t         *vm_colortable(char *t, char *te);
-int             vm_colorpattern(color_t *t, char *te, char *p);
-color_t         *vm_colorblank();
-char            *vm_colorget(char *p, char *ty, void *o);
-void            vm_endline();
-char 		*vm_coloradv(char *ty, char *p, char *te);
-char            *vm_colorstr(char *t);
-char            *vm_colorfieldstr(char *t);
-char            *vm_colortypestr(char *t);
-char            *vm_coloraddress(char *p, elfsh_Addr a);
-char            *vm_colornumber(char *p, u_int n);
-char            *vm_colorsends(char *t); 
-char            *vm_colorwarn(char *t);
-char		*vm_colorstring(char *text);
-char		*vm_colorsends(char *text); 
-char		*vm_colorwarn(char *text);
-char            *vm_colorstr_fmt(char *p, char *t);
-char            *vm_colorfieldstr_fmt(char *p, char *t);
-char            *vm_colortypestr_fmt(char *p, char *t);
-char		*vm_colorwarn_fmt(char *pattern, char *text);
-char		*vm_colorinstr(char *text);
+int		update_col();
+void		*vm_readline_malloc(unsigned int sz);
+void		vm_readline_free(void *ptr);
 
 /* Object creation/verification functions */
 int		vm_convert_object(elfshpath_t *obj, u_int objtype);
-elfshL1_t	*vm_create_L1ENT(void		*get_obj,
-				 void		*get_obj_idx,
-				 void		*get_obj_nam,
-				 hash_t		*l2_hash,
-				 void		*get_entptr,
-				 void		*get_entval,
-				 void		*set_entval,
-				 u_int		elem_size);
+elfshL1_t	*vm_create_L1ENT(void	*get_obj,
+				 void	*get_obj_idx,
+				 void	*get_obj_nam,
+				 hash_t	*l2_hash,
+				 void	*get_entptr,
+				 void	*get_entval,
+				 void	*set_entval,
+				 u_int	elem_size);
 elfshL2_t	*vm_create_L2ENT(void	*get_obj,
 				 void	*set_obj,
 				 char	type,
@@ -1116,9 +1152,9 @@ elfshL2_t	*vm_create_L2ENT(void	*get_obj,
 				 void	*set_name,
 				 void	*get_data,
 				 void	*set_data);
-elfshcmd_t	*vm_create_CMDENT(int		(*exec)(void *file, void *av),
-				  int		(*reg)(u_int i, u_int ac, char **av),
-				  int		flags, char *help);
+elfshcmd_t	*vm_create_CMDENT(int	(*exec)(void *file, void *av),
+				  int	(*reg)(u_int i, u_int ac, char **av),
+				  int	flags, char *help);
 elfshredir_t	*vm_create_REDIR(u_char type, char *sname, char *dname, 
 				 elfsh_Addr saddr, elfsh_Addr daddr);
 elfshpath_t	*vm_create_IMMED(char type, char perm, u_int val);
@@ -1152,11 +1188,12 @@ int		vm_own_job(elfshjob_t *job);
 int		vm_valid_workspace(char *name);
 void		vm_switch_job(elfshjob_t *job);
 elfshjob_t	*vm_clone_job(elfshjob_t *job);
+int		vm_add_script_cmd(char *dirstr);
+int		vm_clearscreen(int i, char c);
+int		vm_install_clearscreen();
+int		vm_screen_switch();
 
 void		wait4exit(void *);
 
 #endif /* __ELFSH_H_ */
 
-
-
-int		vm_config();

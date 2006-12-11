@@ -13,15 +13,11 @@
 /* Only useful when debugger takes control by .ctors */
 void		e2dbg_init(void)
 {
-  // FIXME: take care before malloc pointers were filled at first malloc
-  // calls, so we cant erase all the e2dbgworld at this moment
-  //memset((void *) &e2dbgworld, 0, sizeof(e2dbgworld_t));
-  write(1, "Calling DLSYM_INIT from e2dbg init !\n", 37);
+  write(1, " [D] Calling DLSYM_INIT from e2dbg init !\n", 42);
   e2dbg_dlsym_init();
   vm_dbgid_set(0);
-  e2dbgworld.context = NULL;
-  SETSIG; 
-  write(1, "Finished e2dbg ctor \n", 21);
+  SETSIG_USR1; 
+  write(1, " [D] Finished e2dbg ctors \n", 26);
 }
 
 
@@ -39,7 +35,8 @@ int		e2dbg_entry(e2dbgparams_t *params)
   vm_dbgid_set(pthread_self());
   ac = params->ac;
   av = params->av;
-  signal(SIGUSR1, e2dbg_sigusr1_handler);
+  SETSIG_USR1;
+  //signal(SIGUSR1, e2dbg_sigusr1_handler);
 
 #if __DEBUG_E2DBG__
   printf("[e2dbg_entry] CHECKPOINT 1\n");
@@ -97,10 +94,11 @@ int		e2dbg_entry(e2dbgparams_t *params)
       vm_addcmd(CMD_UNDISPLAY, (void *) cmd_undisplay, vm_getvarparams, 1, HLP_UNDISPLAY);
       vm_addcmd(CMD_RSHT     , (void *) cmd_rsht     , vm_getregxoption, 1, HLP_RSHT);
       vm_addcmd(CMD_RPHT     , (void *) cmd_rpht     , vm_getregxoption, 1, HLP_RPHT);
+      vm_addcmd(CMD_THREADS  , (void *) cmd_threads  , vm_getvarparams, 1, HLP_THREADS);
     }
 
 
-  if (ac == 2 && !e2dbgworld.step)
+  if (ac == 2 && (!e2dbgworld.curthread || !e2dbgworld.curthread->step))
     vm_print_banner(av[1]);
 
   if (world.state.vm_mode == ELFSH_VMSTATE_DEBUGGER && e2dbg_setup(av[1]) < 0)
@@ -151,11 +149,16 @@ elfshobj_t	*vm_get_parent_object(elfsh_Addr addr)
   elfsh_Phdr	*cur;
   elfshobj_t	*curfile;
   elfshsect_t	*cursect;
+  char		**keys;
+  int		index;
+  int		keynbr;
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
-  for (curfile = world.curjob->list; curfile != NULL; curfile = curfile->next)
+  keys = hash_get_keys(&world.curjob->loaded, &keynbr);
+  for (index = 0; index < keynbr; index++)
     {
+      curfile = hash_get(&world.curjob->loaded, keys[index]);
       cursect = elfsh_get_parent_section(curfile, addr, NULL);
       if (cursect)
 	{

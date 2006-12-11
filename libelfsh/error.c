@@ -6,8 +6,7 @@
 */
 #include "libelfsh.h"
 
-
-#define		ELFSH_MAX_PATTERN	50			/* Maximum patterns depth */
+#define		ELFSH_MAX_PATTERN	80			/* Maximum patterns depth */
 
 
 static char	mem[2][ELFSH_MAX_PATTERN][80] = {{{0,0,0}}};	/* Patterns memory */
@@ -56,7 +55,6 @@ int		elfsh_profile_print(char *file, char *func, u_int line, char *msg)
   snprintf(buf, sizeof(buf), "<%s@%s:%u>", func, file, line);
   snprintf(buff, sizeof(buff), "%-50s %s", buf, (msg ? msg : ""));
   flag = 0;
-
   
   for (idx = 0; idx < ELFSH_MAX_PATTERN; idx++)
     if (!strcmp(buff, mem[sel][idx]))
@@ -133,12 +131,30 @@ void		elfsh_profile_err(char *file, char *func, u_int line, char *msg)
 	  fill[elfsh_depth] = 0x00;
 	}
 
-      snprintf(buff, sizeof(buff), " <%s@%s:%u>", func, file, line);
-      snprintf(buf, BUFSIZ, " [W] %s %-50s %s \n", fill, buff, msg); 
+      if (dbgworld.endline != NULL)
+	{
+	  snprintf(buff, sizeof(buff), " <%s@%s:%s>", 
+		   dbgworld.colorstr(func), dbgworld.colorstr(file), 
+		   dbgworld.colornumber("%u", line));
+	  snprintf(buf, BUFSIZ, " %s %s %-50s %s \n", 
+		   dbgworld.colorwarn("[W]"), fill, buff, dbgworld.colorwarn(msg)); 
+	}
+      else
+	{
+	  snprintf(buff, sizeof(buff), " <%s@%s:%u>", 
+		   func, file, line);
+	  snprintf(buf, BUFSIZ, " [W] %s %-50s %s \n", 
+		   fill, buff, msg);
+	}
+
       if (dbgworld.profile_err != NULL)		
 	dbgworld.profile_err(buf);			
       else					
 	fprintf(stderr, "[libelfsh:profile_err] No profiling function specified.\n");		
+      
+      if (dbgworld.endline != NULL)
+	dbgworld.endline();
+
       elfsh_profile_reset(0);
     }
 }
@@ -149,6 +165,7 @@ void		elfsh_profile_out(char *file, char *func, u_int line)
 {
   char		buff[160];
   char		*space;
+  char		b_dir[2];
 
   if (dbgworld.proflevel >= ELFSH_OUTPROF)
     {
@@ -164,10 +181,28 @@ void		elfsh_profile_out(char *file, char *func, u_int line)
       memset(space, ' ', elfsh_depth);
       space[elfsh_depth] = 0x00;
 
-      snprintf(buff, sizeof(buff), "%s %u %c <%s@%s:%u> \n", 
-	       space, elfsh_depth, elfsh_direction, 
-	       func, file, line);
+      if (dbgworld.endline != NULL)
+	{
+	  b_dir[0] = elfsh_direction;
+	  b_dir[1] = '\0';
+
+	  snprintf(buff, sizeof(buff), "%s %s %s <%s@%s:%s> \n", 
+		   space, dbgworld.colornumber("%u", elfsh_depth), 
+		   dbgworld.colorfieldstr(b_dir), 
+		   dbgworld.colorstr(func), dbgworld.colorstr(file),
+		   dbgworld.colornumber("%u", line));
+	}
+      else
+	{
+	  snprintf(buff, sizeof(buff), "%s %u %c <%s@%s:%u> \n", 
+		   space, elfsh_depth, elfsh_direction, 
+		   func, file,line);
+	  
+	}
       dbgworld.profile(buff);	
+      
+      if (dbgworld.endline != NULL)
+	dbgworld.endline();
     }
 }
 

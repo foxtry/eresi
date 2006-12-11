@@ -14,13 +14,6 @@
 
 
 
-/* List of loaded objects available for the user who submitted the 
-   injection request */
-static elfshobj_t	*list_workspace = NULL;
-static elfshobj_t	*list_shared = NULL;
-
-
-
 /* Perform relocation on entry (Now use ELFsh 0.6 hooks model) */
 static int      elfsh_relocate_entry(elfshsect_t        *new,
                                      void               *reloc,
@@ -37,110 +30,6 @@ static int      elfsh_relocate_entry(elfshsect_t        *new,
 		      "Unable to relocate object", -1);
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, ret);
 }
-
-
-
-/* Return the strongest symbol in the object */
-/* FIXME : we dont support symbol selection when 2 'concurrent' 
-   symbols are in the same object, take care */
-elfsh_Sym	*elfsh_strongest_symbol(elfsh_Sym *choice, elfsh_Sym *candidate)
-{
-  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-
-  if (elfsh_get_symbol_type(choice) == STT_NOTYPE)
-    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (candidate));
-      
-  if (elfsh_get_symbol_type(candidate) == STT_NOTYPE)
-    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (choice));
-
-  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,
-		     (elfsh_get_symbol_bind(choice) < 
-		      elfsh_get_symbol_bind(candidate) ?
-		      candidate : choice));
-}
-
-
-
-
-
-/* Find in the available objects list the most important symbol with this name */
-elfshobj_t	*elfsh_find_obj_by_symbol(char *name)
-{
-  elfshobj_t	*curidx;
-  elfshobj_t	*choice;
-  elfsh_Sym	*symchoice;
-  elfsh_Sym	*sym;
-
-  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-  choice = NULL;
-  symchoice = sym = NULL;
-
-#if	__DEBUG_STATIC__	      
-  printf("[DEBUG_STATIC] Looking for %s \n", name);
-#endif
-  /* Look in the user owned files */
-  for (curidx = list_workspace; curidx != NULL; curidx = curidx->next)
-    {
-      sym = elfsh_get_metasym_by_name(curidx, name);
-      if (sym)
-	{
-	  if (!symchoice || (sym == elfsh_strongest_symbol(symchoice, sym)))
-	    {
-	      symchoice = sym;
-	      choice = curidx;
-
-#if	__DEBUG_STATIC__	      
-	      printf("[DEBUG_STATIC] Found stronger symbol %s (%08X) in %s [USERLIST] \n", 
-		     name, symchoice->st_value, choice->name);
-#endif
-
-	    }
-	}
-    } 
-  
-  /* If the selected et_rel is beeing injected warn caller */
-  if (choice->pending)
-    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, NULL) ;
-
-  /* If we found something in the local list, do not search in the shared one */
-  if (symchoice != NULL)
-    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (choice)) ;
-
-  /* Now look in the shared files */
-  for (curidx = list_shared; curidx != NULL; curidx = curidx->next)
-    {
-      sym = elfsh_get_metasym_by_name(curidx, name);
-      if (sym)
-        {
-          if (!symchoice || (sym == elfsh_strongest_symbol(symchoice, sym)))
-            {
-              symchoice = sym;
-              choice = curidx;
-
-#if	__DEBUG_STATIC__	      
-	      printf("Found stronger symbol %s (%08X) in %s [SHAREDLIST] \n",
-		     name, symchoice->st_value, choice->name);
-#endif
-
-            }
-        }
-    } 
-
-  /* If the selected et_rel is beeing injected warn caller */
-  if (choice->pending)
-    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, NULL);
-
-  /* If we found something in the local list, do not search in the shared one */
-  if (symchoice != NULL)
-    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (choice));
-  
-  ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,
-		    "Object not found", ((void *) -1));
-}
-
-
-
-
 
 
 /* Find the host symbol we rely on for performing the relocation */
@@ -513,25 +402,16 @@ static int	elfsh_inject_etrel_section(elfshobj_t *file, elfshsect_t *sect, u_int
   writable = elfsh_get_section_writableflag(sect->shdr);
 
   /* FreeBSD is incompatible with pre-interp injection */
-  if (elfsh_get_ostype(file) == ELFSH_OS_FREEBSD ||
-      elfsh_get_ostype(file) == ELFSH_OS_BEOS ||
-      FILE_IS_ALPHA64(file) ||
-      FILE_IS_SPARC(file))
-    {
-      mode   = ELFSH_DATA_INJECTION;
-      modulo = 4;
-    }
-  else if (writable)
-    {
-      mode   = ELFSH_DATA_INJECTION;
-      modulo = 4; 
-    }
-  else
-    {
-      mode = ELFSH_CODE_INJECTION;
-      /* modulo = mod; (to be uncommented one day) */
-      modulo = elfsh_get_pagesize(file);	
-    }
+  ELFSH_SELECT_INJECTION(file,writable,mode);
+
+   if (mode == ELFSH_DATA_INJECTION)
+      modulo = sizeof(elfsh_Addr);
+   else
+     {
+       /* modulo = mod; (to be uncommented one day) */
+       //modulo = elfsh_get_pagesize(file);
+       modulo = sizeof(elfsh_Addr);
+     }
 
 #if	__DEBUG_RELADD__
   printf("[DEBUG_RELADD] Mapping new section %s with data = %p \n", new->name, data);
@@ -564,7 +444,7 @@ int		elfsh_fuse_etrel_symtab(elfshobj_t *file, elfshobj_t *rel)
   u_int		index;
   char		sctname[BUFSIZ];
   elfsh_Sym	*sym;
-  u_int		symnbr;
+  int		symnbr;
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
@@ -642,8 +522,6 @@ int		elfsh_fuse_bss(elfshobj_t *file, elfshobj_t *rel)
 
 
 
-
-
 /* Inject a ET_REL object into a ET_EXEC object */
 int		elfsh_inject_etrel(elfshobj_t *file, elfshobj_t *rel)
 {
@@ -699,7 +577,6 @@ int		elfsh_inject_etrel(elfshobj_t *file, elfshobj_t *rel)
     {
       
       /* Get the current section */
-      /* XXX: use a sect current pointer .. */
       sect = elfsh_get_section_by_index(rel, index, NULL, NULL);
       if (sect == NULL)
 	{
@@ -725,6 +602,7 @@ int		elfsh_inject_etrel(elfshobj_t *file, elfshobj_t *rel)
   
   /* compute the inject modulo */
   mod = elfsh_get_pagesize(file);
+  //mod = sizeof(elfsh_Addr);
       
   /* Do a copy of the procedure linkage table for eventual redirection */
   if (!elfsh_static_file(file) && elfsh_copy_plt(file, mod) < 0)
@@ -738,11 +616,16 @@ int		elfsh_inject_etrel(elfshobj_t *file, elfshobj_t *rel)
   hooks = elfsh_get_section_by_name(file, ELFSH_SECTION_NAME_HOOKS, 0, 0, 0); 
   if (!hooks)
     {
+      int mode;
+
+      /* get injection mode */
+      ELFSH_SELECT_INJECTION(file,NULL,mode);
+
       pgsize = elfsh_get_pagesize(file);
       hooks = elfsh_insert_section(file, 
 				   ELFSH_SECTION_NAME_HOOKS, 
 				   NULL,
-				   ELFSH_CODE_INJECTION, 
+				   mode, 
 				   pgsize - 1, pgsize);
       if (!hooks)
 	{
@@ -756,6 +639,7 @@ int		elfsh_inject_etrel(elfshobj_t *file, elfshobj_t *rel)
 #if __DEBUG_RELADD__
   printf("[DEBUG_RELADD] Entering intermediate symbol injection loop\n");
 #endif
+
 
   /* Intermediate pass 2 : Inject ET_REL symbol table into host file */
   if (elfsh_fuse_etrel_symtab(file, rel) < 0)
@@ -780,14 +664,13 @@ int		elfsh_inject_etrel(elfshobj_t *file, elfshobj_t *rel)
 
 
 /* Front end function for injection in static binaries with module dependences */
-int		elfsh_inject_etrel_withlist(elfshobj_t *host, elfshobj_t *rel, 
-					    elfshobj_t *listw, elfshobj_t *listsh)
+int		elfsh_inject_etrel_hash(elfshobj_t *host, elfshobj_t *rel, 
+					hash_t *listw, hash_t *listsh)
 {
   int		ret;
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-  list_workspace = listw;
-  list_shared = listsh;
+  elfsh_register_working_objects(listw, listsh);
   ret = elfsh_inject_etrel(host, rel);
   if (ret < 0)
     ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,

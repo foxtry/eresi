@@ -73,7 +73,7 @@ int		vm_system(char *cmd)
   
   /* If the user shell is unspecified we use system */
   nbr = vm_findblanks(cmd);
-  av = vm_doargv(nbr, &argc, cmd);
+  av = vm_doargv(nbr, (u_int *)&argc, cmd);
   av++;
   if (!fork())
     ret = execvp(av[0], av);
@@ -231,18 +231,46 @@ char		*vm_build_unknown(char *buf, const char *str, u_long type)
 
 
 /* Retreive a file object giving its unique ID */
-elfshobj_t	*vm_getfile(u_int index)
+elfshobj_t	*vm_getfile(u_int id)
 {
   elfshobj_t	*cur;
+  elfshobj_t	*subcur;
+  char		**keys;
+  int		idx;
+  int		keynbr;
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
-  for (cur = world.curjob->list; cur; cur = cur->next)
-    if (cur->id == index)
-      ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (cur));
-  for (cur = world.shared; cur; cur = cur->next)
-    if (cur->id == index)
-      ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (cur));
+  /* Check in private objects of the workspace */
+  if (hash_size(&world.curjob->loaded))
+    {
+      keys = hash_get_keys(&world.curjob->loaded, &keynbr);
+      for (idx = 0; idx < keynbr; idx++)
+	{
+	  cur = hash_get(&world.curjob->loaded, keys[idx]);
+	  if (cur->id == id)
+	    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (cur));
+	  
+	  if ((subcur = vm_is_depid(cur, id)) != NULL)
+	    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (subcur));	
+	}
+    }
+
+  /* Check in shared objects */
+  if (hash_size(&world.shared_hash))
+    {
+      keys = hash_get_keys(&world.shared_hash, &keynbr);
+      for (idx = 0; idx < keynbr; idx++)
+	{
+	  cur = hash_get(&world.shared_hash, keys[idx]);
+	  if (cur->id == id)
+	    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (cur));
+	  
+	  if ((subcur = vm_is_depid(cur, id)) != NULL)
+	    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, (subcur));	
+	}
+    }
+
   ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		    "Unable to find file", (NULL));
 }
@@ -276,6 +304,7 @@ int		vm_doerror(void (*fct)(char *str), char *str)
   ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		    "Bypassed error printing", (-1));
 }
+
 
 /* Mark the current object SHT to be removed on savnig */
 int             cmd_shtrm()
@@ -372,10 +401,21 @@ int		cmd_network()
 int		cmd_verb()
 {
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-  vm_output(" [*] Switched to verbose mode \n");
+  vm_output(" [*] Switched to verbose mode \n\n");
   world.state.vm_quiet = 0;
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
+
+
+
+/* Turn on the FORCE flag */
+int             cmd_force()
+{
+  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
+  world.state.vm_force = 1;
+  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
+}
+
 
 /* Useful when you have only one terminal */
 int		cmd_meta()
@@ -951,32 +991,10 @@ int		vm_install_clearscreen()
 }
 
 
-
-#ifdef __DEBUG_TEST__
-int		cmd_test()
-{
-  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-
-  raise(SIGILL);
-  // alors la je voulais ajouter une commande pour que ca break dans gdb quand
-  // on l'utilise mais ca marche pas, le prog se fait kill,
-  // j'ai essaye SIGTRAP, __asm__.., SIGSEGV, de mettre un signal(..., SIG_DFL); 
-  // devant et ca se termine toujours en process killed
-  // en multithread c assez chelou surtout que ce gdb na pas le 'breakpoint 
-  // pending'
-  // en fait a l'origine je voulais trouver pk dans e2dbg quand on fait un 
-  // dynsym malloc le process se fait killed
-  // recemment ca marchait beaucoup mileuxmais jai changer des trucs
-  // dans xmalloc.c, je me rapelle plus quoi :)
-
-  ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
-}
-#endif
-
-
 int		vm_screen_switch()
 {
-  char		    buf[BUFSIZ];
+  unsigned int	    var = 0x42424242;
+  char		    buf[BUFSIZ * 4];
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
@@ -1040,5 +1058,10 @@ int		vm_screen_switch()
 
   //rl_forced_update_display(); 
 
+  if (var != 0x42424242)
+    {
+      printf("Buffer overflow detected on screen buffer \n");
+      exit(0);
+    }
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }

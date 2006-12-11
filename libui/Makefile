@@ -14,11 +14,11 @@ NAME	 	= 	libui
 CFLAGS		+= 	-fPIC -g3 -gstabs+ -Wall -Iinclude $(DYNOPT) $(BUILDOP) \
 			 -I../libelfsh/include/ -I../libc/include/ -I../libdump/include/ \
 			 -I../libasm/include/  -I../e2dbg/include/ -I /usr/pkg/include/  \
-			 -I../vm/include/ \
+			 -I../vm/include/ -I../libmjollnir/include/ \
 			-DELFSH_INTERN $(STATOPT2) $(ASMOPT) $(BITS) $(NCURSESLNOPT) $(READLNOPT)
 
 LDFLAGS		+= 	-L../libelfsh/ -lelfsh -L../libdump/ -L/usr/pkg/lib/ \
-			-lpthread -L../libc -lcelfsh -L../libasm/ -lasm \
+			$(LPTHREAD) -L../libc -lcelfsh -L../libasm/ -lasm \
 			-L../libmalloc -lmalloc-e2dbg -g3 $(LDASMOPT) \
 			$(DLOPT)  -L/usr/freeware/lib32/ $(DYNOPT) $(BITS) $(EXTRAOPT) \
 			$(LDDUMPOPT) $(LDNCURSESLNOPT) $(LDREADLNOPT)

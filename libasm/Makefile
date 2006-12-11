@@ -31,6 +31,7 @@ SRCS_libasm 	=				\
 		src/arch/ia32/ei386-0.c		\
 		src/arch/ia32/ei386-1.c		\
 		src/arch/ia32/ei386-2.c		\
+		src/arch/ia32/ei386-3.c		\
 		src/arch/ia32/ei386-4.c		\
 		src/arch/ia32/ei386-8.c		\
 		src/arch/ia32/ei386-9.c		\
@@ -85,10 +86,18 @@ clean:
 
 fclean: clean
 	$(RM) ${NAME_libasm} ${NAME_mydisasm} ${NAME_cmpdump} 
+
 tags:
 	@$(ETAGS) -a arch/i386/*.c include/*.h engine/*.c sample/*.c
 	@echo TAGS generated succesfully
 
 .c.o:
 	$(CC) $(CFLAGS) ${DBGFLAGS} -c $*.c -o $*.o
+
+mydisasm:
+	$(CC) -ggdb -I../libelfsh/include/ -I./include/ \
+	-I../libc/include/ -L./ -L../libelfsh/ \
+	-L../libc/ -L../libmalloc/ -lpthread \
+	tools/mydisasm.c -o ./mydisasm -lasm -lelfsh -lcelfsh -lmalloc-e2dbg
+
 

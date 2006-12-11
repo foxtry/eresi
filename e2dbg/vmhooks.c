@@ -416,11 +416,7 @@ int		  e2dbg_getregs()
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
-  /* Fingerprint binary
-  **
-  ** This hook is non-fatal, we just wont have registers as
-  ** variables if it fails.
-  */
+  /* Fingerprint binary */
   archtype = elfsh_get_archtype(world.curjob->current);
   hosttype = elfsh_get_hosttype(world.curjob->current);
   ostype = elfsh_get_ostype(world.curjob->current);
@@ -429,7 +425,8 @@ int		  e2dbg_getregs()
       ostype   == ELFSH_OS_ERROR)
     ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		      "GETREGS handler unexistant for this ARCH/OS", -1);
-  
+
+  /* This hook is non-fatal, we just wont have registers as variables if it fails */
   (*hook_getregs[archtype][hosttype][ostype])();
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
@@ -444,11 +441,7 @@ int		  e2dbg_setregs()
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
-  /* Fingerprint binary
-  **
-  ** This hook is non-fatal, we just wont have registers as
-  ** variables if it fails.
-  */
+  /* Fingerprint binary */
   archtype = elfsh_get_archtype(world.curjob->current);
   hosttype = elfsh_get_hosttype(world.curjob->current);
   ostype = elfsh_get_ostype(world.curjob->current);
@@ -457,12 +450,13 @@ int		  e2dbg_setregs()
       ostype   == ELFSH_OS_ERROR)
     ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		      "SETREGS handler unexistant for this ARCH/OS", -1);
-  
+
+  /* This hook is non-fatal, we just wont have modified registers if it fails. */
   (*hook_setregs[archtype][hosttype][ostype])();
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
 
-/* Call the getregs hook */
+/* Call the getpc hook */
 elfsh_Addr*     e2dbg_getpc()
 {
   elfsh_Addr	*pc;
@@ -472,11 +466,7 @@ elfsh_Addr*     e2dbg_getpc()
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
-  /* Fingerprint binary
-  **
-  ** This hook is non-fatal, we just wont have registers as
-  ** variables if it fails.
-  */
+  /* Fingerprint binary */
   archtype = elfsh_get_archtype(world.curjob->current);
   hosttype = elfsh_get_hosttype(world.curjob->current);
   ostype = elfsh_get_ostype(world.curjob->current);
@@ -634,17 +624,17 @@ elfsh_Addr	e2dbg_getret(elfshobj_t *file, elfsh_Addr addr)
 void		  e2dbg_get_regvars_ia32_bsd()
 { 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-#if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
-  VM_GETREG(ELFSH_EAXVAR, e2dbgworld.context->uc_mcontext.mc_eax);
-  VM_GETREG(ELFSH_EBXVAR, e2dbgworld.context->uc_mcontext.mc_ebx);
-  VM_GETREG(ELFSH_ECXVAR, e2dbgworld.context->uc_mcontext.mc_ecx);
-  VM_GETREG(ELFSH_EDXVAR, e2dbgworld.context->uc_mcontext.mc_edx);
-  VM_GETREG(ELFSH_ESIVAR, e2dbgworld.context->uc_mcontext.mc_esi);
-  VM_GETREG(ELFSH_EDIVAR, e2dbgworld.context->uc_mcontext.mc_edi);
-  VM_GETREG(ELFSH_SPVAR , e2dbgworld.context->uc_mcontext.mc_esp);
-  //VM_GETREG(ELFSH_SSPVAR, e2dbgworld.context->uc_mcontext.mc_ssp); /* XXX */
-  VM_GETREG(ELFSH_FPVAR , e2dbgworld.context->uc_mcontext.mc_ebp);
-  VM_GETREG(ELFSH_PCVAR , e2dbgworld.context->uc_mcontext.mc_eip);
+#if !defined(__amd64__) && defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
+  VM_GETREG(ELFSH_EAXVAR, e2dbgworld.curthread->context->uc_mcontext.mc_eax);
+  VM_GETREG(ELFSH_EBXVAR, e2dbgworld.curthread->context->uc_mcontext.mc_ebx);
+  VM_GETREG(ELFSH_ECXVAR, e2dbgworld.curthread->context->uc_mcontext.mc_ecx);
+  VM_GETREG(ELFSH_EDXVAR, e2dbgworld.curthread->context->uc_mcontext.mc_edx);
+  VM_GETREG(ELFSH_ESIVAR, e2dbgworld.curthread->context->uc_mcontext.mc_esi);
+  VM_GETREG(ELFSH_EDIVAR, e2dbgworld.curthread->context->uc_mcontext.mc_edi);
+  VM_GETREG(ELFSH_SPVAR , e2dbgworld.curthread->context->uc_mcontext.mc_esp);
+  //VM_GETREG(ELFSH_SSPVAR, e2dbgworld.curthread->context->uc_mcontext.mc_ssp); /* XXX */
+  VM_GETREG(ELFSH_FPVAR , e2dbgworld.curthread->context->uc_mcontext.mc_ebp);
+  VM_GETREG(ELFSH_PCVAR , e2dbgworld.curthread->context->uc_mcontext.mc_eip);
 #endif
   ELFSH_PROFILE_OUT(__FILE__, __FUNCTION__, __LINE__);
 }
@@ -654,16 +644,16 @@ void		  e2dbg_get_regvars_ia32_sysv()
 { 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 #if defined(__linux__) || defined(sun)
-  VM_GETREG(ELFSH_EAXVAR, e2dbgworld.context->uc_mcontext.gregs[REG_EAX]);
-  VM_GETREG(ELFSH_EBXVAR, e2dbgworld.context->uc_mcontext.gregs[REG_EBX]);
-  VM_GETREG(ELFSH_ECXVAR, e2dbgworld.context->uc_mcontext.gregs[REG_ECX]);
-  VM_GETREG(ELFSH_EDXVAR, e2dbgworld.context->uc_mcontext.gregs[REG_EDX]);
-  VM_GETREG(ELFSH_ESIVAR, e2dbgworld.context->uc_mcontext.gregs[REG_ESI]);
-  VM_GETREG(ELFSH_EDIVAR, e2dbgworld.context->uc_mcontext.gregs[REG_EDI]);
-  VM_GETREG(ELFSH_SPVAR , e2dbgworld.context->uc_mcontext.gregs[REG_ESP]);
-  VM_GETREG(ELFSH_SSPVAR, e2dbgworld.context->uc_mcontext.gregs[REG_UESP]); 
-  VM_GETREG(ELFSH_FPVAR , e2dbgworld.context->uc_mcontext.gregs[REG_EBP]);
-  VM_GETREG(ELFSH_PCVAR , e2dbgworld.context->uc_mcontext.gregs[REG_EIP]);
+  VM_GETREG(ELFSH_EAXVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EAX]);
+  VM_GETREG(ELFSH_EBXVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EBX]);
+  VM_GETREG(ELFSH_ECXVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_ECX]);
+  VM_GETREG(ELFSH_EDXVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EDX]);
+  VM_GETREG(ELFSH_ESIVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_ESI]);
+  VM_GETREG(ELFSH_EDIVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EDI]);
+  VM_GETREG(ELFSH_SPVAR , e2dbgworld.curthread->context->uc_mcontext.gregs[REG_ESP]);
+  VM_GETREG(ELFSH_SSPVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_UESP]); 
+  VM_GETREG(ELFSH_FPVAR , e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EBP]);
+  VM_GETREG(ELFSH_PCVAR , e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EIP]);
 #endif
   ELFSH_PROFILE_OUT(__FILE__, __FUNCTION__, __LINE__);
 }
@@ -673,17 +663,17 @@ void		  e2dbg_get_regvars_ia32_sysv()
 void		  e2dbg_set_regvars_ia32_bsd()
 { 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-#if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
-  VM_SETREG(ELFSH_EAXVAR, e2dbgworld.context->uc_mcontext.mc_eax);
-  VM_SETREG(ELFSH_EBXVAR, e2dbgworld.context->uc_mcontext.mc_ebx);
-  VM_SETREG(ELFSH_ECXVAR, e2dbgworld.context->uc_mcontext.mc_ecx);
-  VM_SETREG(ELFSH_EDXVAR, e2dbgworld.context->uc_mcontext.mc_edx);
-  VM_SETREG(ELFSH_ESIVAR, e2dbgworld.context->uc_mcontext.mc_esi);
-  VM_SETREG(ELFSH_EDIVAR, e2dbgworld.context->uc_mcontext.mc_edi);
-  VM_SETREG(ELFSH_SPVAR , e2dbgworld.context->uc_mcontext.mc_esp);
-  //VM_SETREG(ELFSH_SSPVAR, e2dbgworld.context->uc_mcontext.mc_ssp); /* XXX */
-  VM_SETREG(ELFSH_FPVAR , e2dbgworld.context->uc_mcontext.mc_ebp);
-  VM_SETREG(ELFSH_PCVAR , e2dbgworld.context->uc_mcontext.mc_eip);
+#if !defined(__amd64__) && defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
+  VM_SETREG(ELFSH_EAXVAR, e2dbgworld.curthread->context->uc_mcontext.mc_eax);
+  VM_SETREG(ELFSH_EBXVAR, e2dbgworld.curthread->context->uc_mcontext.mc_ebx);
+  VM_SETREG(ELFSH_ECXVAR, e2dbgworld.curthread->context->uc_mcontext.mc_ecx);
+  VM_SETREG(ELFSH_EDXVAR, e2dbgworld.curthread->context->uc_mcontext.mc_edx);
+  VM_SETREG(ELFSH_ESIVAR, e2dbgworld.curthread->context->uc_mcontext.mc_esi);
+  VM_SETREG(ELFSH_EDIVAR, e2dbgworld.curthread->context->uc_mcontext.mc_edi);
+  VM_SETREG(ELFSH_SPVAR , e2dbgworld.curthread->context->uc_mcontext.mc_esp);
+  //VM_SETREG(ELFSH_SSPVAR, e2dbgworld.curthread->context->uc_mcontext.mc_ssp); /* XXX */
+  VM_SETREG(ELFSH_FPVAR , e2dbgworld.curthread->context->uc_mcontext.mc_ebp);
+  VM_SETREG(ELFSH_PCVAR , e2dbgworld.curthread->context->uc_mcontext.mc_eip);
 #endif
   ELFSH_PROFILE_OUT(__FILE__, __FUNCTION__, __LINE__);
 }
@@ -695,16 +685,16 @@ void		  e2dbg_set_regvars_ia32_sysv()
 { 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 #if defined(__linux__) || defined(sun)
-  VM_SETREG(ELFSH_EAXVAR, e2dbgworld.context->uc_mcontext.gregs[REG_EAX]);
-  VM_SETREG(ELFSH_EBXVAR, e2dbgworld.context->uc_mcontext.gregs[REG_EBX]);
-  VM_SETREG(ELFSH_ECXVAR, e2dbgworld.context->uc_mcontext.gregs[REG_ECX]);
-  VM_SETREG(ELFSH_EDXVAR, e2dbgworld.context->uc_mcontext.gregs[REG_EDX]);
-  VM_SETREG(ELFSH_ESIVAR, e2dbgworld.context->uc_mcontext.gregs[REG_ESI]);
-  VM_SETREG(ELFSH_EDIVAR, e2dbgworld.context->uc_mcontext.gregs[REG_EDI]);
-  VM_SETREG(ELFSH_SPVAR , e2dbgworld.context->uc_mcontext.gregs[REG_ESP]);
-  VM_SETREG(ELFSH_SSPVAR, e2dbgworld.context->uc_mcontext.gregs[REG_UESP]); 
-  VM_SETREG(ELFSH_FPVAR , e2dbgworld.context->uc_mcontext.gregs[REG_EBP]);
-  VM_SETREG(ELFSH_PCVAR , e2dbgworld.context->uc_mcontext.gregs[REG_EIP]);
+  VM_SETREG(ELFSH_EAXVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EAX]);
+  VM_SETREG(ELFSH_EBXVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EBX]);
+  VM_SETREG(ELFSH_ECXVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_ECX]);
+  VM_SETREG(ELFSH_EDXVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EDX]);
+  VM_SETREG(ELFSH_ESIVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_ESI]);
+  VM_SETREG(ELFSH_EDIVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EDI]);
+  VM_SETREG(ELFSH_SPVAR , e2dbgworld.curthread->context->uc_mcontext.gregs[REG_ESP]);
+  VM_SETREG(ELFSH_SSPVAR, e2dbgworld.curthread->context->uc_mcontext.gregs[REG_UESP]); 
+  VM_SETREG(ELFSH_FPVAR , e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EBP]);
+  VM_SETREG(ELFSH_PCVAR , e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EIP]);
 #endif
   ELFSH_PROFILE_OUT(__FILE__, __FUNCTION__, __LINE__);
 }
@@ -714,9 +704,9 @@ void		  e2dbg_set_regvars_ia32_sysv()
 elfsh_Addr*	  e2dbg_getpc_bsd_ia32()
 {
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-#if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
+#if !defined(__amd64__) && defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,
-		    &e2dbgworld.context->uc_mcontext.mc_eip);
+		    &e2dbgworld.curthread->context->uc_mcontext.mc_eip);
 #endif
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, NULL);
 }
@@ -727,7 +717,7 @@ elfsh_Addr*	  e2dbg_getpc_sysv_ia32()
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 #if defined(__linux__) || defined(sun)
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,
-		     &e2dbgworld.context->uc_mcontext.gregs[REG_EIP]);
+		     (elfsh_Addr *)&e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EIP]);
 #endif
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, NULL);
 }
@@ -738,9 +728,9 @@ elfsh_Addr*	  e2dbg_getpc_sysv_ia32()
 elfsh_Addr*	  e2dbg_getfp_bsd_ia32()
 {
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-#if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
+#if !defined(__amd64__) && defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,
-		    &e2dbgworld.context->uc_mcontext.mc_ebp);
+		    &e2dbgworld.curthread->context->uc_mcontext.mc_ebp);
 #endif
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, NULL);
 }
@@ -751,7 +741,7 @@ elfsh_Addr*	  e2dbg_getfp_sysv_ia32()
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 #if defined(__linux__) || defined(sun)
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__,
-		     &e2dbgworld.context->uc_mcontext.gregs[REG_EBP]);
+		     (elfsh_Addr *)&e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EBP]);
 #endif
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, NULL);
 }
@@ -761,8 +751,8 @@ elfsh_Addr*	  e2dbg_getfp_sysv_ia32()
 void		  e2dbg_setstep_bsd_ia32()
 {
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-#if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
-  e2dbgworld.context->uc_mcontext.mc_eflags |= 0x100;
+#if !defined(__amd64__) && defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
+  e2dbgworld.curthread->context->uc_mcontext.mc_eflags |= 0x100;
 #endif
   ELFSH_PROFILE_OUT(__FILE__, __FUNCTION__, __LINE__);
 }
@@ -772,7 +762,7 @@ void		  e2dbg_setstep_sysv_ia32()
 {
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 #if defined(__linux__) || defined(sun)
-  e2dbgworld.context->uc_mcontext.gregs[REG_EFL] |= 0x100; 
+  e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EFL] |= 0x100; 
 #endif
   ELFSH_PROFILE_OUT(__FILE__, __FUNCTION__, __LINE__);
 }
@@ -782,7 +772,7 @@ void		  e2dbg_resetstep_sysv_ia32()
 {
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 #if defined(__linux__) || defined(sun)
-  e2dbgworld.context->uc_mcontext.gregs[REG_EFL] &= ~0x100;
+  e2dbgworld.curthread->context->uc_mcontext.gregs[REG_EFL] &= ~0x100;
 #endif
   ELFSH_PROFILE_OUT(__FILE__, __FUNCTION__, __LINE__);
 }
@@ -791,8 +781,8 @@ void		  e2dbg_resetstep_sysv_ia32()
 void		  e2dbg_resetstep_bsd_ia32()
 {
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
-#if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
-  e2dbgworld.context->uc_mcontext.mc_eflags &= ~0x100;
+#if !defined(__amd64__) && defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__)
+  e2dbgworld.curthread->context->uc_mcontext.mc_eflags &= ~0x100;
 #endif
   ELFSH_PROFILE_OUT(__FILE__, __FUNCTION__, __LINE__);
 }

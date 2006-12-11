@@ -120,6 +120,7 @@ void		*elfsh_get_symtab(elfshobj_t *file, int *num)
 
   if (file->secthash[ELFSH_SECTION_SYMTAB] == NULL)
     {
+      //fprintf(stderr, "Loading symtab for object %s \n", file->name);
 
       /* If symtab is already loaded, return it */
       s = elfsh_get_section_by_type(file, SHT_SYMTAB,
@@ -136,8 +137,10 @@ void		*elfsh_get_symtab(elfshobj_t *file, int *num)
 
 	  /* Now load the string table */
 	  s = elfsh_get_strtab(file, s->shdr->sh_link);
+	  if (NULL == s)
+	    ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
+			      "Unable to load STRTAB", NULL);	  
 	  s->parent = file;
-	  
 	}
 
       /*
@@ -145,6 +148,9 @@ void		*elfsh_get_symtab(elfshobj_t *file, int *num)
       ** Create a minimal .symtab if unexistant
       */
       elfsh_fixup_symtab(file, &strindex);
+
+      //fprintf(stderr, "symtab FIXED for object %s \n", file->name);
+      
     }
 
   if (num != NULL)
@@ -258,7 +264,7 @@ void		elfsh_shift_usualsyms(elfshsect_t *sect, elfsh_Sym *sym)
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
-  //printf("Calling shift usual syms ! \n");
+  //fprintf(stderr, "Calling shift usual syms ! \n");
 
   /* Change _end if necessary (solaris) */
   end = elfsh_get_dynsymbol_by_name(sect->parent, "_end");
@@ -298,8 +304,11 @@ int		elfsh_insert_symbol(elfshsect_t *sect,
 {
   elfsh_Sym	*orig;
   int		index;
+  int		mode;
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
+
+  //fprintf(stderr, "Adding symbol %s \n", name);
 
   /* Sanity checks */
   if (sect == NULL || sect->shdr == NULL ||
@@ -319,7 +328,12 @@ int		elfsh_insert_symbol(elfshsect_t *sect,
 
   /* Shift some special symbols */
   //if (sect->shdr->sh_type == SHT_DYNSYM)
+  //fprintf(stderr, "Shifting usual symbols\n");
+  mode = elfsh_get_mode();
+  elfsh_set_static_mode();
   elfsh_shift_usualsyms(sect, sym);
+  elfsh_set_mode(mode);
+  //fprintf(stderr, "Shifted usual symbols\n");
 
   /* Insert symbol name in .shstrtab */
   index = elfsh_insert_in_strtab(sect->parent, name);
@@ -328,8 +342,8 @@ int		elfsh_insert_symbol(elfshsect_t *sect,
 		      "Unable to insert in SHSTRTAB", -1);
 
 #if __DEBUG_RELADD__
-  printf("[DEBUG_RELADD] Injected symbol %-20s [" AFMT "] \n",
-	 name, (elfsh_Addr) sym->st_value);
+  fprintf(stderr, "[DEBUG_RELADD] Injected symbol %-20s [" AFMT "] \n",
+	  name, (elfsh_Addr) sym->st_value);
 #endif
 
   /* Insert symbol in .symtab */
