@@ -1,4 +1,7 @@
-/* auto generated source file on Tue Apr 15 23:54:37 2003 */
+/**
+ * $Id: init_i386.c,v 1.7 2006-12-19 10:24:36 heroine Exp $
+ *
+ */
 #ifndef I386_H_
 #define I386_h_
 
@@ -7,12 +10,12 @@
 
 void	init_instr_table(asm_processor *);
 
+
 /**
  * handler to disassemble ia32 code.
  * fetch in asm_i386_processor structure points to this function
  *
  */
-
 int     fetch_i386(asm_instr *instr, u_char *buf, u_int len, asm_processor *proc) {
   asm_i386_processor	*i386p;
 
@@ -42,7 +45,7 @@ void asm_init_i386(asm_processor *proc) {
   proc->fetch = fetch_i386;
   proc->display_handle = asm_ia32_display_instr_att;
   inter = proc->internals = malloc(sizeof (struct s_asm_proc_i386));
-  inter->oplen = inter->addlen = 0;
+  inter->opsize = inter->addsize = 0;
   inter->mode = INTEL_PROT;
   // inter->get_vect_size = get_i386_vect_size;
   for (i = 0; i< 256; i++) {
@@ -152,13 +155,16 @@ void asm_init_i386(asm_processor *proc) {
   inter->cisc_set[0x63] = op_arpl_ew_rw;
   inter->cisc_set[0x64] = op_prefix_fs;
   inter->cisc_set[0x65] = op_prefix_gs;
-  inter->cisc_set[0x66] = op_oplen;
+  inter->cisc_set[0x66] = op_opsize;
   inter->cisc_set[0x67] = op_addsize;
   inter->cisc_set[0x68] = op_push_iv;
   inter->cisc_set[0x69] = op_imul_rv_rmv_iv;
   inter->cisc_set[0x6a] = op_push_ib;
   inter->cisc_set[0x6b] = op_imul_gv_ev_ib;
+  inter->cisc_set[0x6c] = op_insb;
+  inter->cisc_set[0x6d] = op_insw;
   inter->cisc_set[0x6e] = op_outsb;
+  inter->cisc_set[0x6f] = op_outsw;
   inter->cisc_set[0x70] = op_jo;
   inter->cisc_set[0x71] = op_jno;
   inter->cisc_set[0x72] = op_jb;
@@ -303,13 +309,38 @@ void asm_init_i386(asm_processor *proc) {
   inter->cisc_set[0xff] = op_indir_rmv;
   inter->cisc_i386[0x00] = op_group6;
   inter->cisc_i386[0x01] = op_group7;
+  inter->cisc_i386[0x09] = i386_wbinvd;
   inter->cisc_i386[0x0b] = op_ud2a;
   inter->cisc_i386[0x20] = i386_mov_rm_cr;
   inter->cisc_i386[0x22] = i386_mov_cr_rm;
   inter->cisc_i386[0x23] = i386_mov_dr_rm;
+  inter->cisc_i386[0x31] = i386_rdtsc;
+  inter->cisc_i386[0x32] = i386_rdmsr;
+  inter->cisc_i386[0x40] = i386_cmovo;
+  inter->cisc_i386[0x41] = i386_cmovno;
+  inter->cisc_i386[0x42] = i386_cmovb;
   inter->cisc_i386[0x43] = i386_cmovae;
+  inter->cisc_i386[0x44] = i386_cmove;
   inter->cisc_i386[0x45] = i386_cmovne;
-  inter->cisc_i386[0x47] = op_cmova;
+  inter->cisc_i386[0x46] = i386_cmovbe;
+  inter->cisc_i386[0x47] = i386_cmova;
+  inter->cisc_i386[0x48] = i386_cmovs;
+  inter->cisc_i386[0x49] = i386_cmovns;
+  inter->cisc_i386[0x4a] = i386_cmovp;
+  inter->cisc_i386[0x4b] = i386_cmovnp;
+  inter->cisc_i386[0x4c] = i386_cmovl;
+  inter->cisc_i386[0x4d] = i386_cmovnl;
+  inter->cisc_i386[0x4e] = i386_cmovle;
+  inter->cisc_i386[0x4f] = i386_cmovnle;
+  inter->cisc_i386[0x60] = i386_punpcklbw_pq_qd;
+  inter->cisc_i386[0x67] = i386_packuswb_pq_qq;
+  inter->cisc_i386[0x68] = i386_punpckhbw_pq_qq;
+  inter->cisc_i386[0x6e] = i386_movd_pd_qd;
+  inter->cisc_i386[0x6f] = i386_movq_pq_qq;
+  inter->cisc_i386[0x71] = i386_group12;
+  inter->cisc_i386[0x73] = i386_group14;
+  inter->cisc_i386[0x77] = i386_emms;
+  inter->cisc_i386[0x7f] = i386_movq_qq_pq;
   inter->cisc_i386[0x82] = i386_jb;
   inter->cisc_i386[0x83] = i386_jae;
   inter->cisc_i386[0x84] = i386_je;
@@ -319,6 +350,7 @@ void asm_init_i386(asm_processor *proc) {
   inter->cisc_i386[0x88] = i386_js;
   inter->cisc_i386[0x89] = i386_jns;
   inter->cisc_i386[0x8a] = i386_jp;
+  inter->cisc_i386[0x8b] = i386_jnp;
   inter->cisc_i386[0x8c] = i386_jl;
   inter->cisc_i386[0x8d] = i386_jge;
   inter->cisc_i386[0x8e] = i386_jle;
@@ -345,19 +377,37 @@ void asm_init_i386(asm_processor *proc) {
   inter->cisc_i386[0xa3] = i386_bt_rm_r;
   inter->cisc_i386[0xa4] = i386_shld;
   inter->cisc_i386[0xa5] = i386_shld_rmv_rv_cl;
+  inter->cisc_i386[0xa7] = i386_xstorenrg;
   inter->cisc_i386[0xab] = i386_bts;
   inter->cisc_i386[0xac] = i386_shrd_rmv_rv_ib;
   inter->cisc_i386[0xad] = i386_shrd_rmv_rv_cl;
+  inter->cisc_i386[0xae] = i386_group15;
   inter->cisc_i386[0xaf] = i386_imul_rv_rmv;
+  inter->cisc_i386[0xb1] = op_cmp_xchg;
   inter->cisc_i386[0xb2] = op_lss_rv_rmv;
   inter->cisc_i386[0xb3] = op_btr_rmv_rv;
   inter->cisc_i386[0xb6] = i386_movzbl_rv_rmb;
   inter->cisc_i386[0xb7] = i386_movzwl_rv_rm2;
+  inter->cisc_i386[0xba] = i386_btrl;
   inter->cisc_i386[0xbc] = i386_bsf;
   inter->cisc_i386[0xbd] = i386_bsr_rv_rmb;
   inter->cisc_i386[0xbe] = i386_movsbl_rv_rmb;
   inter->cisc_i386[0xbf] = i386_movswl_rv_rm2;
+  inter->cisc_i386[0xc1] = i386_xadd;
   inter->cisc_i386[0xc8] = i386_bswap;
+  inter->cisc_i386[0xc9] = i386_bswap;
+  inter->cisc_i386[0xca] = i386_bswap;
+  inter->cisc_i386[0xcb] = i386_bswap;
+  inter->cisc_i386[0xcc] = i386_bswap;
+  inter->cisc_i386[0xcd] = i386_bswap;
+  inter->cisc_i386[0xce] = i386_bswap;
+  inter->cisc_i386[0xcf] = i386_bswap;
+  inter->cisc_i386[0xd5] = i386_pmullw_pq_qq;
+  inter->cisc_i386[0xdb] = i386_pand_pq_qq;
+  inter->cisc_i386[0xdc] = i386_paddusb_pq_qq;
+  inter->cisc_i386[0xdd] = i386_paddusw_pq_qq;
+  inter->cisc_i386[0xeb] = i386_por_pq_qq;
+  inter->cisc_i386[0xef] = i386_pxor_pq_qq;
 
 }
 

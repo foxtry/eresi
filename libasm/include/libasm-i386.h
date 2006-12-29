@@ -1,6 +1,6 @@
 /*
 ** 
-** i386.h in 
+** $Id: libasm-i386.h,v 1.7 2006-12-19 11:03:22 heroine Exp $
 ** 
 ** Author  : <kahmm@altdev.net>
 ** Started : Tue Dec  2 22:40:31 2003
@@ -23,13 +23,13 @@ void	asm_resolve_ia32(void *d, u_int, char *, u_int);
 
 struct s_asm_proc_i386 {
   /* compatibility				*/
-  /* processor state: oplen actived or not	*/
+  /* processor state: opsize actived or not	*/
   int			mode;
   
   int			vect_size;
-  int			addlen;
-  int			oplen;
-  
+  int			addsize;
+  int			opsize;
+    
   int			type;
   int			(*get_vect_size)(asm_processor *);
   
@@ -37,7 +37,7 @@ struct s_asm_proc_i386 {
   int			(*cisc_set[256])(asm_instr *, u_char *, u_int, 
 					 asm_processor *);
   
-/* handlers for i386 instr. prefixed by 0xff by second opcode	*/
+  /* handlers for i386 instr. prefixed by 0x0f by second opcode	*/
   int			(*cisc_i386[256])(asm_instr *, u_char *, u_int, 
 					  asm_processor *);
   /*	internal opcode tables	*/
@@ -122,6 +122,10 @@ struct s_asm_proc_i386 {
 #define ASM_PREFIX_OPSIZE	128
 #define ASM_PREFIX_ADDSIZE	256
 
+
+/**
+ * Content of the struct s_operand type field
+ */
 
 enum {
   /* no operand				
@@ -230,6 +234,11 @@ enum {
   ASM_OTYPE_ST_7
 } e_asm_operand_type;
 
+/**
+ * Content of the struct s_operand size field
+ *
+ */
+
 enum {
   ASM_OSIZE_NONE,
   ASM_OSIZE_BYTE,
@@ -244,6 +253,10 @@ enum {
   ASM_OSIZE_6BYTES
 } e_asm_operand_size;
 
+
+/**
+ * Currently unsupported.
+ */
 enum {
   ASM_ENC_NONE,
   ASM_ENC_ADDRESS,
@@ -320,6 +333,10 @@ enum {
  *
  **/
 
+/**
+ * 8 bits registers set.
+ */
+
 enum {
   ASM_REG_AL,	/* 000	*/
   ASM_REG_CL,	/* 001	*/
@@ -330,6 +347,10 @@ enum {
   ASM_REG_DH,	/* 110	*/
   ASM_REG_BH	/* 111	*/
 } e_asm_reg8;
+
+/**
+ * 16 bits registers set.
+ */
 
 enum {
   ASM_REG_AX,	/* 000	*/
@@ -342,6 +363,10 @@ enum {
   ASM_REG_DI	/* 111	*/
 } e_asm_reg16;
 
+/**
+ * 32 bits registers set.
+ */
+
 enum e_regset_r32 {
   ASM_REG_EAX,	/* 000	*/
   ASM_REG_ECX,	/* 001	*/
@@ -353,6 +378,10 @@ enum e_regset_r32 {
   ASM_REG_EDI	/* 111	*/
  } e_asm_reg32;
 
+/**
+ * MM registers set.
+ */
+
 enum {
   ASM_REG_MM0,	/* 110	*/
   ASM_REG_MM1,	/* 110	*/
@@ -363,6 +392,9 @@ enum {
   ASM_REG_MM7	/* 110	*/
 } e_asm_regmm;
 
+/**
+ * XMMS registers set.
+ */
 enum {
   ASM_REG_XMM0,	/* 110	*/
   ASM_REG_XMM1,	/* 110	*/
@@ -373,6 +405,10 @@ enum {
   ASM_REG_XMM6,	/* 110	*/
   ASM_REG_XMM7	/* 110	*/
 } e_asm_regxmm;
+
+/**
+ * Segment registers set.
+ */
 
 enum {
   ASM_REG_ES,	/* 000	*/
@@ -386,6 +422,10 @@ enum {
 
 } e_asm_sreg;
 
+/**
+ * Control registers set.
+ */
+
 enum {
   ASM_REG_CR0,	/* 000	*/
   ASM_REG_CR1,	/* 001	*/
@@ -396,6 +436,10 @@ enum {
   ASM_REG_CR6,	/* 110	*/
   ASM_REG_CR7	/* 111	*/
 } e_asm_creg;
+
+/**
+ * Debug registers set
+ */
 
 enum {
   ASM_REG_DR0,	/* 000	*/
@@ -409,13 +453,12 @@ enum {
 } e_asm_dreg;
 
 /**
- * instruction list.
- *
- *
- *
+ * Instruction list.
  * Last instruction must be ASM_BAD
+ * If NOT, this may produce allocation error as ASM_BAD is used to allocate 
+ * size of the instruction label array.
+ * Refer to init_instr_table in tables_i386.c
  */
-
 
 enum asm_instr {
   ASM_NONE,  
@@ -513,6 +556,8 @@ enum asm_instr {
   /* 25 */
   ASM_SUB,
   ASM_XOR,
+  ASM_XADD,
+  ASM_CLFLUSH,
   ASM_CMP,
   ASM_IN,
   ASM_INC,
@@ -536,6 +581,7 @@ enum asm_instr {
   ASM_XCHG,
   ASM_INSB,
   ASM_INSW,
+  ASM_INSD,
   ASM_PUSHA,
   ASM_POPA,
   /* 45 */
@@ -674,7 +720,15 @@ enum asm_instr {
   ASM_LFENCE,
   ASM_MLENCE,
   ASM_SLENCE,
-  
+
+  ASM_WBINVD,
+  ASM_RDMSR,
+  ASM_XSTORERNG,
+  ASM_XCRYPTCBC,
+  ASM_XCRYPTCFB,
+  ASM_XCRYPTOFB,
+  ASM_BTRL,
+
   ASM_PREFETCH_NTA,
   ASM_PREFETCH_T0,
   ASM_PREFETCH_T1,
@@ -689,13 +743,44 @@ enum asm_instr {
   ASM_SLDT,
   ASM_INVLPG,
   /* 150 */
+  ASM_RDTSC,
   ASM_LLDT,
   ASM_LBRANCH,
   ASM_CMOVA,
+  ASM_CMOVE,
   ASM_CMOVAE,
+  ASM_CMOVO,
+  ASM_CMOVNO,
+  ASM_CMOVB,
+  ASM_CMOVBE,
+  ASM_CMOVS,
+  ASM_CMOVNS,
+  ASM_CMOVP,
+  ASM_CMOVNP,
+  ASM_CMOVL,
+  ASM_CMOVNL,
+  ASM_CMOVLE,
+  ASM_CMOVNLE,
   ASM_MOVSBL,
   ASM_MOVSWL,
+  ASM_MOVD,
+  ASM_MOVQ,
   ASM_BSWAP,
+  ASM_PAND,
+  ASM_POR,
+  ASM_PXOR,
+  ASM_PSLLQ,
+  ASM_PSRLQ,
+  ASM_PSRLW,
+  ASM_PSRAW,
+  ASM_PSLLW,
+  ASM_PMULLW,
+  ASM_PADDUSW,
+  ASM_PADDUSB,
+  ASM_PUNPCKLBW,
+  ASM_PUNPCKHBW,
+  ASM_PACKUSWB,
+  ASM_EMMS,
 
   /*
    * FPU INSTRUCTIONS

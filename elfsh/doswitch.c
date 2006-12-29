@@ -49,14 +49,18 @@ int		cmd_doswitch()
   if (ret < 0)
     {
       snprintf(logbuf, BUFSIZ - 1,
-	       "\n [!] Cant switch on file object %s (use 'list') \n\n", 
+	       "\n [!] Cant switch on file object %s (use 'list') (switching to a dependence need the id) \n\n", 
 	       world.curjob->curcmd->param[0]);
       vm_output(logbuf);
     }
   else
     {
       cur = world.curjob->current;
-	
+
+#if defined(USE_MJOLLNIR)
+	mjr_set_current_context(&world.mjr_session, cur->name);
+#endif
+
       snprintf(logbuf, BUFSIZ - 1, "\n [*] Switched on object %u (%s) \n\n",
 	       cur->id, cur->name);
       vm_output(logbuf);

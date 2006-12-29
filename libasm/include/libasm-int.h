@@ -1,3 +1,8 @@
+/**
+ * $Id: libasm-int.h,v 1.6 2006-12-19 10:24:36 heroine Exp $
+ *
+ *
+ */
 #ifndef LIBASM_INT_H
 #define LIBASM_INT_H
 
@@ -44,7 +49,8 @@ char	*asm_ia32_display_instr_att(asm_instr *ins, int addr);
 char	*asm_sparc_display_instr(asm_instr *, int addr);
 
 
-int		asm_proc_oplen(asm_processor *proc);
+int		asm_proc_opsize(asm_processor *proc);
+int		asm_proc_addsize(asm_processor *proc);
 int		asm_proc_vector_size(asm_processor *proc);
 int		asm_proc_vector_len(asm_processor *);
 int		asm_proc_is_protected(asm_processor *);
@@ -137,6 +143,7 @@ int op_cmp_rb_rmb(asm_instr *, u_char *, u_int, asm_processor *);
 int op_cmp_rv_rmv(asm_instr *, u_char *, u_int, asm_processor *);
 int op_cmp_al_ib(asm_instr *, u_char *, u_int, asm_processor *);
 int op_cmp_eax_iv(asm_instr *, u_char *, u_int, asm_processor *);
+int op_cmp_xchg(asm_instr *, u_char *, u_int, asm_processor *);
 int op_prefix_ds(asm_instr *, u_char *, u_int, asm_processor *);
 int op_aas(asm_instr *, u_char *, u_int, asm_processor *);
 int op_inc_reg(asm_instr *, u_char *, u_int, asm_processor *);
@@ -177,12 +184,15 @@ int op_bound_gv_ma(asm_instr *, u_char *, u_int, asm_processor *);
 int op_arpl_ew_rw(asm_instr *, u_char *, u_int, asm_processor *);
 int op_prefix_fs(asm_instr *, u_char *, u_int, asm_processor *);
 int op_prefix_gs(asm_instr *, u_char *, u_int, asm_processor *);
-int op_oplen(asm_instr *, u_char *, u_int, asm_processor *);
+int op_opsize(asm_instr *, u_char *, u_int, asm_processor *);
 int op_push_iv(asm_instr *, u_char *, u_int, asm_processor *);
 int op_imul_rv_rmv_iv(asm_instr *, u_char *, u_int, asm_processor *);
 int op_push_ib(asm_instr *, u_char *, u_int, asm_processor *);
 int op_imul_gv_ev_ib(asm_instr *, u_char *, u_int, asm_processor *);
+int op_insb(asm_instr *, u_char *, u_int, asm_processor *);
+int op_insw(asm_instr *, u_char *, u_int, asm_processor *);
 int op_outsb(asm_instr *, u_char *, u_int, asm_processor *);
+int op_outsw(asm_instr *, u_char *, u_int, asm_processor *);
 int op_jo(asm_instr *, u_char *, u_int, asm_processor *);
 int op_jno(asm_instr *, u_char *, u_int, asm_processor *);
 int op_jb(asm_instr *, u_char *, u_int, asm_processor *);
@@ -328,12 +338,26 @@ int op_indir_rmv(asm_instr *, u_char *, u_int, asm_processor *);
 int op_group6(asm_instr *, u_char *, u_int, asm_processor *);
 int op_group7(asm_instr *, u_char *, u_int, asm_processor *);
 int op_ud2a(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_rdtsc(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_mov_rm_cr(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_mov_cr_rm(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_mov_dr_rm(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_cmovae(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmove(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_cmovne(asm_instr *, u_char *, u_int, asm_processor *);
-int op_cmova(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovno(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovbe(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovb(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovo(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmova(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovs(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovns(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovp(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovnp(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovl(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovnl(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovle(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_cmovnle(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_jb(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_jae(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_je(asm_instr *, u_char *, u_int, asm_processor *);
@@ -342,6 +366,7 @@ int i386_jbe(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_ja(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_js(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_jp(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_jnp(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_jns(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_jl(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_jge(asm_instr *, u_char *, u_int, asm_processor *);
@@ -367,6 +392,10 @@ int i386_push_fs(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_pop_fs(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_cpuid(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_bt_rm_r(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_xadd(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_group12(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_group14(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_group15(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_bswap(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_shld(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_shld_rmv_rv_cl(asm_instr *, u_char *, u_int, asm_processor *);
@@ -382,6 +411,22 @@ int i386_bsf(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_bsr_rv_rmb(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_movsbl_rv_rmb(asm_instr *, u_char *, u_int, asm_processor *);
 int i386_movswl_rv_rm2(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_movd_pd_qd(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_movq_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_movq_qq_pq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_pand_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_por_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_pxor_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_pmullw_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_paddusw_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_paddusb_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_punpcklbw_pq_qd(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_punpckhbw_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_packuswb_pq_qq(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_emms(asm_instr *, u_char *, u_int, asm_processor *);
 int op_addsize(asm_instr *, u_char *, u_int, asm_processor *);
-
+int i386_wbinvd(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_rdmsr(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_btrl(asm_instr *, u_char *, u_int, asm_processor *);
+int i386_xstorenrg(asm_instr *, u_char *, u_int, asm_processor *);
 #endif

@@ -50,7 +50,7 @@ char	elfsh_shift_section(elfshsect_t *sct, elfshsect_t *tmp, u_char mode)
 ** elfsh_load_sht() which has not loaded symtab yet.
 **
 ** This function is used for constructing the map (elfshobj_t) of a 
-0** binary file in memory. It is called as well at each new section
+** binary file in memory. It is called as well at each new section
 ** injection.
 **
 ** See libelfsh/inject.c for the user-friendly section injection API
@@ -905,7 +905,8 @@ void			*elfsh_get_raw(elfshsect_t *sect)
     {
       //printf("entering raw debug mode (sect = %08X) \n", sect);
       //fflush(stdout);
-      //printf("%08X + base %08X \n", sect->shdr->sh_addr, sect->parent->rhdr.base);
+      //fprintf(stderr, "RAW Returning %08X + base %08X \n", 
+      //     sect->shdr->sh_addr, sect->parent->rhdr.base);
 
       sect->pdata = (void *) sect->shdr->sh_addr;
       if (!elfsh_section_is_runtime(sect))
@@ -1066,7 +1067,7 @@ int		elfsh_write_section_data(elfshsect_t		*sect,
 
   if (sect == NULL || sect->shdr == NULL || sect->data == NULL || data == NULL)
     ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, 
-		      "Invalid NULL paramater", -1);
+		      "Invalid NULL parameter", -1);
 
   if (sizelem == 0)
     sizelem = 1;

@@ -1,5 +1,5 @@
 /*
-** private - do not distribute
+** $Id: ei386-a.c,v 1.5 2006-12-19 11:03:22 heroine Exp $
 ** 
 ** Author  : <sk at devhell dot org>
 ** Started : Fri Aug  2 03:04:41 2002
@@ -148,6 +148,25 @@ int i386_shld_rmv_rv_cl(asm_instr *new, u_char *opcode, u_int len, asm_processor
 }
 
 /*
+  <i386 func="i386_shld_rmv_rv_cl" opcode="0xa7"/>
+*/
+
+int	i386_xstorenrg(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc)
+{
+  switch(*(opcode + 1))
+    {
+    case 0xc0:  new->instr = ASM_XSTORERNG; break;
+    case 0xd0:	new->instr = ASM_XCRYPTCBC; break;
+    case 0xe0:	new->instr = ASM_XCRYPTCFB; break;
+    case 0xe8:	new->instr = ASM_XCRYPTOFB; break;
+    default: new->instr = ASM_NONE;
+    }
+  new->len += 2;
+  return (new->len);
+}
+
+
+/*
   <i386 func="i386_bts" opcode="0xab"/>
  */
 
@@ -207,6 +226,43 @@ int i386_shrd_rmv_rv_cl(asm_instr *new, u_char *opcode, u_int len, asm_processor
 }
 
 
+/*
+  <instruction func="i386_group15" opcode="0xae"/>
+ */
+
+int i386_group15(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
+  struct s_modrm	*modrm;  
+  modrm = (struct s_modrm *) opcode + 1;
+  
+  new->len += 1;
+  
+  switch(modrm->r) {
+	case 2:
+	  new->instr = ASM_LDMXCSR;
+   	  new->op1.type = ASM_OTYPE_ENCODED;
+	  operand_rmv(&new->op1, opcode + 1, len - 1, proc);
+	  new->len += new->op1.len;
+	break;
+	
+	case 3:
+	  new->instr = ASM_STMXCSR;
+   	  new->op1.type = ASM_OTYPE_ENCODED;
+	  operand_rmv(&new->op1, opcode + 1, len - 1, proc);
+	  new->len += new->op1.len;
+	break;
+	
+	case 7:
+	  new->instr = ASM_CLFLUSH;
+	  new->op1.type = ASM_OTYPE_GENERAL;
+	break;
+	
+	default:
+	  new->len = 0;
+	break;
+  }
+  
+  return (new->len);
+}
 
 /*
   <i386 func="i386_imul_rv_rmv" opcode="0xaf"/>
@@ -222,8 +278,3 @@ int i386_imul_rv_rmv(asm_instr *new, u_char *opcode, u_int len, asm_processor *p
     operand_rv_rmv(new, opcode + 1, len - 1, proc);
     return (new->len);
 }
-
-
-
-
-

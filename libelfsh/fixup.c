@@ -236,6 +236,8 @@ int			elfsh_fixup_dynsymtab(elfshsect_t *dynsym)
   u_int			off;
   u_int			entsz;
   elfsh_Sym		*sym;
+  char			*name;
+  int			mode;
 
   ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
 
@@ -244,6 +246,9 @@ int			elfsh_fixup_dynsymtab(elfshsect_t *dynsym)
   if (!plt)
     ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,
 		      "Unable to get PLT", -1);
+
+  mode = elfsh_get_mode();
+  elfsh_set_static_mode();
 
   entsz = elfsh_get_pltentsz(plt->parent);
 
@@ -262,12 +267,27 @@ int			elfsh_fixup_dynsymtab(elfshsect_t *dynsym)
       sym = elfsh_get_sym_by_value(dynsym->data,
 				   dynsym->shdr->sh_size / sizeof(elfsh_Sym),
 				   plt->shdr->sh_addr + off, NULL, ELFSH_EXACTSYM);
-      
+
+
+
       /* New versions of ld do not fill the vaddr of dynamic symbols, do it ourself */
       if (sym == NULL)
-	elfsh_restore_dynsym(dynsym->parent, plt, off, dynsym);
+      {
+	  sym = elfsh_restore_dynsym(dynsym->parent, plt, off, dynsym);
+
+	  if (sym != NULL)
+	  {
+	      name = elfsh_get_dynsymbol_name(plt->parent, sym);
+
+	      /* __gmon_start__ should not be resolved 
+		 if it was not already done by gcc */
+	      if (name && !strcmp(name, "__gmon_start__"))
+		  sym->st_value = 0x0;
+	  }
+      }
     }
-  
+
+  elfsh_set_mode(mode);
   ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
 

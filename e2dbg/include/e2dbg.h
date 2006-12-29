@@ -10,10 +10,11 @@
  #define __E2DBG_H__
 
 #define		__DEBUG_E2DBG__		0
-#define		__DEBUG_MUTEX__		0
+#define		__DEBUG_MUTEX__		1
 #define		__DEBUG_BP__		0
 #define		__DEBUG_EMALLOC__	0
 #define		__DEBUG_LINKMAP__	0
+#define		__DEBUG_THREADS__	0
 
 #define		E2DBG_NAME		"Embedded ELF Debugger"
 #define		E2DBG_DYNAMIC_LINKMAP	((elfshlinkmap_t *) 1)
@@ -21,8 +22,18 @@
 #define		E2DBG_PROFILER_BUFLEN	256
 #define		E2DBG_SCRIPT_CONTINUE	1
 
+#define		E2DBG_HOOK_GETREGS	"hook_getregs"
+#define		E2DBG_HOOK_SETREGS	"hook_setregs"
+#define		E2DBG_HOOK_GETPC	"hook_getpc"
+#define		E2DBG_HOOK_SETSTEP	"hook_setstep"
+#define		E2DBG_HOOK_RESETSTEP	"hook_resetstep"
+#define		E2DBG_HOOK_GETFP	"hook_getfp"
+#define		E2DBG_HOOK_NEXTFP	"hook_nextfp"
+#define		E2DBG_HOOK_GETRET	"hook_getret"
+
 /* Kernel related defines */
 #define		E2DBG_VSYSCALL_RETADDR	(0xFFFFE420)
+#define		E2DBG_SIGTRAMP_RETADDR	(0xFFFFE440)
 #define		E2DBG_KERNELBASE	((elfsh_Addr) 0xC0000000)
 
 /* Generic register names */
@@ -31,7 +42,7 @@
 #define		ELFSH_FPVAR		"fp"
 #define	        ELFSH_PCVAR		"pc"
 
-/* IA32 registers namse */
+/* IA32 registers names */
 #define		ELFSH_EAXVAR		"eax"
 #define		ELFSH_EBXVAR		"ebx"
 #define		ELFSH_ECXVAR		"ecx"
@@ -75,6 +86,7 @@
 #define		CMD_UNDISPLAY		"undisplay"
 #define		CMD_RSHT		"rsht"
 #define		CMD_RPHT		"rpht"
+#define		CMD_THREADS		"threads"
 
 
 /* Signal handling for debugger */
@@ -86,21 +98,57 @@
  ac.sa_sigaction   = e2dbg_internal_sigsegv_handler;	\
  signal(SIGINT, SIG_IGN);				\
  signal(SIGTRAP, SIG_IGN);				\
+ signal(SIGSTOP, SIG_IGN);				\
+ signal(SIGUSR2, SIG_IGN);				\
 }		while (0);
 
-#define		SETSIG	do {				\
+#define		CLRSIG_USR1 do {			\
  struct sigaction ac;					\
 							\
  memset(&ac, 0x00, sizeof(ac));				\
  ac.sa_flags       = SA_SIGINFO;			\
- ac.sa_sigaction   = e2dbg_generic_breakpoint;		\
- sigaction(SIGTRAP, &ac, NULL);				\
- /*ac.sa_sigaction   = e2dbg_sigsegv_handler;*/		\
- /*sigaction(SIGSEGV, &ac, NULL);*/			\
- ac.sa_sigaction   = e2dbg_sigint_handler;		\
- sigaction(SIGINT, &ac, NULL);				\
+ ac.sa_sigaction   = e2dbg_internal_sigsegv_handler;	\
+ signal(SIGINT, SIG_IGN);				\
+ signal(SIGTRAP, SIG_IGN);				\
+ signal(SIGSTOP, SIG_IGN);				\
+ signal(SIGUSR1, SIG_IGN);				\
 }		while (0);
 
+// Etait dans SETSIG
+// ac.sa_sigaction   = e2dbg_sigsegv_handler;      	
+// sigaction(SIGSEGV, &ac, NULL);			        
+
+#define		SETSIG					\
+do							\
+{							\
+ struct sigaction ac;					\
+							\
+ memset(&ac, 0x00, sizeof(ac));				\
+ ac.sa_flags       = SA_SIGINFO | SA_NODEFER ;		\
+ ac.sa_sigaction   = e2dbg_generic_breakpoint;		\
+ sigaction(SIGTRAP, &ac, NULL);				\
+ ac.sa_sigaction   = e2dbg_sigint_handler;		\
+ sigaction(SIGINT, &ac, NULL);				\
+ ac.sa_sigaction   = e2dbg_sigstop_handler;		\
+ sigaction(SIGSTOP, &ac, NULL);				\
+ ac.sa_sigaction   = e2dbg_thread_sigusr2;		\
+ sigaction(SIGUSR2, &ac, NULL);				\
+} while (0)
+
+#define		SETSIG_USR1				\
+do							\
+{							\
+ struct sigaction ac;					\
+							\
+ memset(&ac, 0x00, sizeof(ac));				\
+ ac.sa_flags       = SA_SIGINFO | SA_NODEFER ;		\
+ ac.sa_sigaction   = e2dbg_generic_breakpoint;		\
+ sigaction(SIGTRAP, &ac, NULL);				\
+ ac.sa_sigaction   = e2dbg_sigusr1_handler;		\
+ sigaction(SIGUSR1, &ac, NULL);				\
+ signal(SIGSTOP, SIG_IGN);				\
+ signal(SIGUSR2, SIG_IGN);				\
+} while (0)
 
 
 /* Create variable from register value */
@@ -137,12 +185,11 @@ while (0)
 
 
 
+/* A mutex is just an unsigned char */
 typedef u_char elfshmutex_t;
 
 
-
-
-/* The internal object descriptor for e2dbg when resolving symbols */
+/* The internal object descriptor for e2dbg when resolving symbols before malloc is available */
 typedef	struct	s_eobj
 {
   int		fd;
@@ -161,26 +208,37 @@ typedef struct		s_e2dbgparams
 }			e2dbgparams_t;
 
 
-/* This structure contains the internal data of the debugger placed in the VM */
-typedef struct		s_e2dbgworld
+/* The structure representing a thread */
+typedef struct		s_thread
 {
-  char			preloaded;			/* Say if we were preloaded */
-  hash_t		bp;				/* Breakpoints hash table */
-  
-#define			E2DBG_STEPCMD_MAX	50
-  char			*displaycmd[E2DBG_STEPCMD_MAX];	/* Commands to be executed on step */
-  u_short		displaynbr;			/* Number of global display cmd */
+  pthread_t		tid;			/* Key identification of that thread */
 
-  /* Current e2dbg state information */
-  e2dbgcontext_t	dbgcontext;			/* Current e2dbg scripting context */
-  ucontext_t		*context;			/* Current debuggee context at bp */
-  elfshbp_t		*curbp;				/* Current breakpoint if any */
-  u_char		step;				/* Stepping flag */
-  u_char		sourcing;			/* We are executing a debugger script */
+#define			E2DBG_THREAD_INIT	0
+#define			E2DBG_THREAD_STARTED	1
+#define			E2DBG_THREAD_BREAKING	2
+#define			E2DBG_THREAD_SIGUSR2	3
+#define			E2DBG_THREAD_BREAKUSR2	4
+#define			E2DBG_THREAD_STOPPING	5
+#define			E2DBG_THREAD_RUNNING	6
+#define			E2DBG_THREAD_FINISHED	7
+  char			state;			/* Initiliazing, Running, Finished */
+  int			count;			/* State (0->2) when breakpointing */
+  int			past;			/* Previous opcode instead of break */
+  u_char		step;			/* Is this thread beeing stepped ? */
+  void			*(*entry)(void *);	/* Entry point */
+  ucontext_t		*context;		/* Thread context on signal */
+  time_t		stime;			/* Creation time */
+  time_t		etime;			/* Ending time */
+  elfsh_Addr		tlsaddr;		/* Address of TLS data */
+  unsigned int		tlsize;			/* Size of TLS data */
+  elfsh_Addr		stackaddr;		/* Address of stack */
+  unsigned int		stacksize;		/* Size of stack */
+}			e2dbgthread_t;
 
-  /* Shared values between handlers */
-  void			*libchandle;			/* Standard library handle */
-  u_int			dbgpid;				/* Thread ID for the debugger */
+
+/* Hold all resolved symbols that we need in pre-malloc stage */
+typedef struct		s_e2dbgsyms
+{
   elfsh_Addr		mallocsym;			/* Resolved libc malloc */
   elfsh_Addr		vallocsym;			/* Resolved libc valloc */
   elfsh_Addr		callocsym;			/* Resolved libc calloc */
@@ -190,17 +248,48 @@ typedef struct		s_e2dbgworld
   elfsh_Addr		mallochooksym;			/* Resolved libc malloc hook */
   elfsh_Addr		memalignhooksym;		/* Resolved libc memalign hook */
   elfsh_Addr		pthstartupsym;			/* Resolved __libc_malloc_pthread_startup */
+  elfsh_Addr		pthreadcreate;			/* Resolved pthread_create */
+  elfsh_Addr		pthreadexit;			/* Resolved pthread_exit */
+  elfsh_Addr		signal;				/* Resolved signal function */
+  elfshlinkmap_t	*map;				/* Early resolved linkmap */
+}			e2dbgsyms_t;
+
+
+
+/* This structure contains the internal data of the debugger placed in the VM */
+typedef struct		s_e2dbgworld
+{
+  char			preloaded;			/* Say if we were preloaded */
+  hash_t		bp;				/* Breakpoints hash table */
+  hash_t		threads;			/* Threads hash table */
+  u_char		sourcing;			/* We are executing a debugger script */
+  u_int			dbgpid;				/* Thread ID for the debugger */
+  e2dbgcontext_t	dbgcontext;			/* Current e2dbg scripting context */
+  e2dbgsyms_t		syms;				/* Resolved symbol informations */
+
+  /* Display commands memory */
+#define			E2DBG_STEPCMD_MAX	50
+  char			*displaycmd[E2DBG_STEPCMD_MAX];	/* Commands to be executed on step */
+  u_short		displaynbr;			/* Number of global display cmd */
+
+  /* Current debuggee threads information */ 
+  elfshbp_t		*curbp;				/* Current breakpoint if any */
+  e2dbgthread_t		*curthread;			/* Currently working thread */
+  e2dbgthread_t		*stoppedthread;			/* Latest stopped thread */
+  u_int			threadnbr;			/* Number of existing threads */
+  u_int			threadsyncnbr;			/* Number of threads with contexts */
+  u_int			threadgotnbr;			/* Number of threads with retreived contexts */
 
   /* Synchronization values */
 #define			ELFSH_MUTEX_UNLOCKED	0
 #define			ELFSH_MUTEX_LOCKED	1
   elfshmutex_t		dbgsyn;				/* Dialog between debugger and debuggee */
   elfshmutex_t		dbgack;				/* Dialog between debugger and debuggee */
+  elfshmutex_t		dbgwait;			/* Dialog between debugger and debuggee */
+  elfshmutex_t		dbgbp;				/* Dialog between debugger and debuggee */
   int			exited;				/* Debugger exited */
   int			debuggee_exited;		/* Debuggee exited */
-
   int			(*real_main)(int argc, char **argv, char **aux);
-
 }			e2dbgworld_t;
 
 /* The Debugger world in the VM */
@@ -269,28 +358,36 @@ void		e2dbg_init(void) __attribute__((constructor));
 int		e2dbg_dlsym_init();
 int		e2dbg_setup(char *name);
 int		e2dbg_entry(e2dbgparams_t *);
-void            e2dbg_sigsegv_handler(int signum, siginfo_t *info, void *context);
-void            e2dbg_internal_sigsegv_handler(int signum, siginfo_t *info, void *pcontext);
-void            e2dbg_sigint_handler(int signum, siginfo_t *info, void *context);
-void            e2dbg_sigtrap_handler(int signum, siginfo_t *info, void *context);
-void            e2dbg_sigusr1_handler(int signum);
 void		e2dbg_generic_breakpoint(int signum, siginfo_t *info, void *context);
 int		e2dbg_mutex_init(elfshmutex_t *m);
 int		e2dbg_mutex_lock(elfshmutex_t *m);
 int		e2dbg_mutex_unlock(elfshmutex_t *m);
 void		e2dbg_start_proc();
 
-/*
-elfsh_Addr	e2dbg_dlsym(elfshobj_t *file, char *symname);
-void		*e2dbg_dlopen(char *objname, elfsh_Addr refaddr, char *refsym);
-void		e2dbg_dlclose(elfshobj_t *file);
-*/
+/* signal handling */
+void            e2dbg_sigsegv_handler(int signum, siginfo_t *info, void *context);
+void            e2dbg_internal_sigsegv_handler(int signum, siginfo_t *info, void *pcontext);
+void            e2dbg_sigint_handler(int signum, siginfo_t *info, void *context);
+void            e2dbg_sigstop_handler(int signum, siginfo_t *info, void *pcontext);
+void            e2dbg_sigtrap_handler(int signum, siginfo_t *info, void *context);
+void            e2dbg_sigusr1_handler(int signum, siginfo_t *info, void *pcontext);
+void            e2dbg_thread_sigusr2(int signum, siginfo_t *info, void *pcontext);
 
-elfsh_Addr	e2dbg_dlsym(char *objname, char *sym2resolve, 
-			    elfsh_Addr refaddr, char *refsym);
+/* e2dbg thread API */
+void		e2dbg_threads_print();
+void		e2dbg_thread_stopall(int signum);
+void		e2dbg_thread_contall();
+int		e2dbg_curthread_init();
+int		pthread_attr_getstack(__const pthread_attr_t *__restrict __attr,
+				      void **__restrict __stackaddr,
+				      size_t *__restrict __stacksize);
 
 
-int		e2dbg_load_linkmap(char *name);
+
+/* Early symbol resolving API */
+int			e2dbg_load_linkmap(char *name);
+elfshlinkmap_t*		e2dbg_linkmap_getaddr();
+elfsh_Addr		e2dbg_dlsym(char *sym2resolve);
 
 /* e2dbg commands */
 int             cmd_mode();
@@ -308,5 +405,6 @@ int             cmd_step();
 int		cmd_start();
 int		cmd_dumpregs();
 int		cmd_cont();
+int		cmd_threads();
 
 #endif

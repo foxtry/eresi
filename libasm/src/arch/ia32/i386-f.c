@@ -1,5 +1,5 @@
 /*
-** private - do not distribute
+** $Id: i386-f.c,v 1.3 2006-12-19 02:46:19 heroine Exp $
 ** 
 ** Author  : <sk at devhell dot org>
 ** Started : Mon Jun 10 17:06:33 2002
@@ -16,8 +16,8 @@ int op_lock(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
   if (!new->ptr_prefix)
     new->ptr_prefix = opcode;
   new->len += 1;
-  new->instr = ASM_LOCK;
-  return (new->len);
+  new->prefix = ASM_PREFIX_LOCK;
+  return (proc->fetch(new, opcode + 1, len - 1, proc));
 }
 
 /*

@@ -316,7 +316,7 @@ int op_lea_rv_m(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) 
   new->op1.size = ASM_OSIZE_VECTOR;
   new->op2.type = ASM_OTYPE_MEMORY;
   
-  operand_rv_m(new, opcode + 1, len - 1, proc);
+  operand_rv_rmv(new, opcode + 1, len - 1, proc);
   return (new->len);
 }
 
@@ -328,7 +328,7 @@ int op_mov_segr_rm(asm_instr *new, u_char *opcode, u_int len, asm_processor *pro
   struct s_modrm	*modrm;
   
   modrm = (struct s_modrm *) opcode + 1;
-  new->len += 2;
+  new->len += 1;
   new->ptr_instr = opcode;
   new->instr = ASM_MOV;
   
@@ -338,9 +338,11 @@ int op_mov_segr_rm(asm_instr *new, u_char *opcode, u_int len, asm_processor *pro
   new->op1.base_reg = modrm->r;
   
   new->op2.type = ASM_OTYPE_GENERAL;
-  new->op2.content = ASM_OP_BASE;
-  new->op2.regset = ASM_REGSET_R32;
-  new->op2.base_reg = modrm->m;
+  operand_rmv(&new->op2, opcode + 1, len - 1, proc);
+  new->len += new->op2.len;
+  //new->op2.content = ASM_OP_BASE;
+  //new->op2.regset = ASM_REGSET_R32;
+  //new->op2.base_reg = modrm->m;
   
   return (new->len);
 }

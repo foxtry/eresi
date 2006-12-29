@@ -457,6 +457,8 @@ int elfsh_check_hdr_type(elfshobj_t *file) {
     "file->hdr->e_type is not valid", NULL);
    break;
  }
+ 
+
    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
 
@@ -464,11 +466,14 @@ int elfsh_check_hdr_machine(elfshobj_t *file) {
 
  ELFSH_PROFILE_IN(__FILE__, __FUNCTION__, __LINE__);
  
+ /** /usr/include/elf.h e_machine may be > 18. 
+  *  disabling this check for the moment.
  if (file->hdr->e_machine > 16) {
    file->hdr->e_machine = ET_NONE;
    ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,
     "file->hdr->e_machine is not valid", NULL);
  }
+ */
 
    ELFSH_PROFILE_ROUT(__FILE__, __FUNCTION__, __LINE__, 0);
 }
@@ -547,9 +552,20 @@ int		elfsh_load_hdr(elfshobj_t *file)
   if ((len = read(file->fd, file->hdr, sizeof(elfsh_Ehdr))) <= 0)
     ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__, (char *)ELFSH_ERR_ARRAY, len);
 
-  elfsh_check_hdr(file);
+  /* This check will not make elfsh able to reconstruct SHT
+  ** if (!file->hdr->e_shnum)
+  ** ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,
+  ** "file->hdr->e_shnum is not valid", -1); 
+  */
+ 
+ if (!file->hdr->e_shentsize)
+   ELFSH_PROFILE_ERR(__FILE__, __FUNCTION__, __LINE__,
+    "file->hdr->e_shentsize is not valid", -1); 
 
   elfsh_endianize_elfhdr(file->hdr, file->hdr->e_ident[EI_DATA]);
+
+  if (elfsh_is_safemode())
+	elfsh_check_hdr(file);
 
 #if defined(ELFSH32)
   if (file->hdr->e_ident[EI_CLASS] != ELFCLASS32)

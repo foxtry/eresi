@@ -44,7 +44,7 @@ int op_mov_eax_ref_iv(asm_instr *new, u_char *opcode, u_int len, asm_processor *
   new->op1.content = ASM_OP_BASE | ASM_OP_FIXED;
   new->op1.ptr = opcode;
   new->op1.type = ASM_OTYPE_FIXED;
-  new->op1.regset = asm_proc_oplen(proc) ? 
+  new->op1.regset = asm_proc_opsize(proc) ? 
     ASM_REGSET_R16 : ASM_REGSET_R32;
   new->op1.base_reg = ASM_REG_EAX;
   
@@ -100,7 +100,7 @@ int op_mov_ref_iv_eax(asm_instr *new, u_char *opcode, u_int len, asm_processor *
     new->op2.content = ASM_OP_BASE | ASM_OP_FIXED;
     new->op2.len = 0;
     new->op2.base_reg = ASM_REG_EAX;
-    new->op2.regset = asm_proc_oplen(proc) ? 
+    new->op2.regset = asm_proc_opsize(proc) ? 
       ASM_REGSET_R16 : ASM_REGSET_R32;
     new->len += 4;
   return (new->len);
@@ -138,7 +138,7 @@ int op_movsb(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
 int op_movsd(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
     new->len += 1;
     new->ptr_instr = opcode;
-    if (asm_proc_oplen(proc))
+    if (asm_proc_opsize(proc))
       new->instr = ASM_MOVSW;
     else
       new->instr = ASM_MOVSD;
@@ -246,21 +246,23 @@ int op_test_al_rb(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc
 
 int op_test_eax_iv(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
     new->instr = ASM_TEST;
-    new->len += 5;
+    new->len += 1 + asm_proc_vector_size(proc);
     new->ptr_instr = opcode;
 
     new->op1.type = ASM_OTYPE_FIXED;
     new->op2.type = ASM_OTYPE_IMMEDIATE;
 
     new->op1.content = ASM_OP_BASE;
-    new->op1.regset = ASM_REGSET_R32;
-    new->op1.base_reg = ASM_REG_EAX;
+    new->op1.regset = asm_proc_opsize(proc) ? 
+      ASM_REGSET_R16 : ASM_REGSET_R32;
+    new->op1.base_reg = ASM_REG_AX;
 
     
-    new->op2.len = 4;
+    new->op2.len = asm_proc_vector_size(proc);
     new->op2.ptr = opcode + 1;
     new->op2.content = ASM_OP_VALUE;  
-    memcpy(&new->op2.imm, opcode + 1, 4);
+    new->op2.imm = 0;
+    memcpy(&new->op2.imm, opcode + 1, asm_proc_vector_size(proc));
     return (new->len);
 }
 
@@ -312,7 +314,7 @@ int op_stosd(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
   
     new->op2.content = ASM_OP_BASE;
     new->op2.len = 0;
-    new->op2.regset = asm_proc_oplen(proc) ?
+    new->op2.regset = asm_proc_opsize(proc) ?
       ASM_REGSET_R16 : ASM_REGSET_R32;
     new->op2.base_reg = ASM_REG_EAX;
   return (new->len);
@@ -335,7 +337,7 @@ int op_lodsb(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
     new->op1.base_reg = ASM_REG_EDI;
     
     new->op2.content = ASM_OP_BASE | ASM_OP_FIXED;
-    new->op2.regset = asm_proc_oplen(proc) ? 
+    new->op2.regset = asm_proc_opsize(proc) ? 
       ASM_REGSET_R16 : ASM_REGSET_R32;
     new->op2.base_reg = ASM_REG_EAX;
       
@@ -390,13 +392,14 @@ int op_scasb(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
   return (new->len);
 }
 
+
 /*
   <instruction func="op_scasd" opcode="0xaf"/>
 */
 
 int op_scasd(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
   new->len += 1;
-  if (asm_proc_oplen(proc))
+  if (asm_proc_opsize(proc))
     new->instr = ASM_SCASW;
   else
     new->instr = ASM_SCASD;

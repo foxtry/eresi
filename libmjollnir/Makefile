@@ -1,52 +1,48 @@
 #
 # LibMjollnir Makefile
-# (C) 2006 Asgard Labs, thorolf a grid.einherjar.de
+#
+# (C) 2001-2006 - Devhell Labs / Asgard Labs (sk, thorolf, mayhem)
+#
 # BSD License 
-# $Id: Makefile,v 1.1.1.5 2006-03-16 19:34:24 thor Exp $
 #
 
-SRC= src/fngdb.c \
-     src/fngengine.c \
-     src/hunter.c \
-     src/bifrost.c \
-     src/libmjollnir.c
+include ../config.h
 
-OBJ=${SRC:.c=.o}
 
-SRCT = tools/thor.c
-OBJT = thor
+SRC	= src/blocks.c src/core.c src/destCall.c src/function.c src/history.c \
+	src/init.c src/internal.c src/symtab.c src/control.c src/btree.c
 
-SRCM = tools/mydisasm.c
-OBJM = mydisasm
+OBJ	= ${SRC:.c=.o}
+SRCT 	= bin/elfThor.c
+OBJT 	= elfThor
 
-CFLAGS= -I./include/ \
-        -I../libc/include/ \
-        -I../libasm/include/ \
-        -I../libelfsh/include/ \
-        -I../libhash/include/ \
-        -Wall -DELFSH32
+SRCUT 	= tools/mjollnirUnitTest.c
+OBJUT 	= mjollnirUnitTest
 
-LDFLAGS= -L. -L../libasm/ \
-         -L../libelfsh/ \
-         -L../libc/ \
-         -L../libmalloc/ \
-         -L/usr/lib/ \
-         -L/usr/local/lib/ \
-         -lelfsh -lasm -lssl -lcelfsh -lmalloc-e2dbg -lmjollnir -lpthread
+CFLAGS	= -fPIC -I./include/ -I../libc/include/ -I../libasm/include/ \
+        -I../libelfsh/include/ -I../libhash/include/ -I../libaspect/include \
+	-Wall $(BITS) -DELFSH_INTERN
 
-CC=gcc -ggdb -g3
+LDFLAGS = -L. -L../libasm/ -L../libelfsh/ -L../libc/ -L../libmalloc \
+	 -L../libaspect/ -lelfsh -lasm -lcelfsh  \
+	  -laspect -lmalloc-e2dbg $(LPTHREAD)
 
-NAME=libmjollnir.a
+CC	= gcc -ggdb -g3
+NAME	= libmjollnir
 
-all: $(OBJ)
-	@ar rc ${NAME} ${OBJ} 
-	@ranlib ${NAME}
-	$(CC) $(CFLAGS) $(SRCT) -o $(OBJT) $(LDFLAGS)
-	$(CC) $(CFLAGS) $(SRCM) -o $(OBJM) $(LDFLAGS)
-
+all	: $(OBJ)
+	$(CC) $(BITS) -shared $(OBJ) -o $(NAME).so -lcrypto $(LDFLAGS)
+	@ar rc ${NAME}.a ${OBJ} 
+	@ranlib ${NAME}.a
+	$(CC) $(CFLAGS) $(LDFLAGS) $(SRCT) -o $(OBJT) $(STATOPT) -lmjollnir
+# comment this out if you don't want to make unittests 
+#	$(CC) $(CFLAGS) -I/usr/local/include/ $(SRCUT) -o $(OBJUT) $(LDFLAGS) -lcheck
 
 clean:
-	rm -f src/*.o $(NAME) $(OBJT) $(OBJM)
+	rm -f src/*.o $(NAME).a $(NAME).so $(OBJT) $(OBJM)
+
+fclean: clean
+	rm -f bin/elfThor mjollnirUnitTest libmjollnir.a libmjollnir.so
 
 .c.o:
 	$(CC) $(CFLAGS) -c $*.c -o $*.o

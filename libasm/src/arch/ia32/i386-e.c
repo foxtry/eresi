@@ -76,9 +76,9 @@ int op_loop(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
  */
 
 int op_je_cxz(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
-  new->len += 3;
-    new->ptr_instr = opcode;
-    new->type = ASM_TYPE_CONDBRANCH;
+  new->len += 2;
+  new->ptr_instr = opcode;
+  new->type = ASM_TYPE_CONDBRANCH;
   new->instr = ASM_BRANCH_CXZ;
   new->op1.type = ASM_OTYPE_JUMP;
   new->op1.size = ASM_OSIZE_BYTE;
@@ -127,7 +127,7 @@ int op_in_eax_ref_ib(asm_instr *new, u_char *opcode, u_int len, asm_processor *p
   new->op1.type = ASM_OTYPE_FIXED;
   new->op1.content = ASM_OP_BASE | ASM_OP_FIXED;
   new->op1.base_reg = ASM_REG_EAX;
-  new->op1.regset = asm_proc_oplen(proc) ? 
+  new->op1.regset = asm_proc_opsize(proc) ? 	  
     ASM_REGSET_R16 : ASM_REGSET_R32;
     
   new->op2.type = ASM_OTYPE_IMMEDIATE;

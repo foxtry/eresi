@@ -1,5 +1,5 @@
 /*
-** private - do not distribute
+** $Id: ei386-b.c,v 1.4 2006-12-19 02:44:32 heroine Exp $
 ** 
 ** Author  : <sk at devhell dot org>
 ** Started : Wed Jul 24 19:52:01 2002
@@ -8,6 +8,20 @@
 
 #include <libasm.h>
 #include <libasm-int.h>
+
+/*
+  <i386 func="op_cmp_xchg" opcode="0xb1"/>
+*/
+
+int	op_cmp_xchg(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
+  new->len += 1;
+  new->instr = ASM_CMPXCHG;
+  
+  new->op1.type = ASM_OTYPE_GENERAL;
+  new->op2.type = ASM_OTYPE_ENCODED;
+  operand_rmv_rv(new, opcode + 1, len - 1, proc);
+  return (new->len);
+}
 
 /*
   <i386 func="op_lss_rv_rmv" opcode="0xb2"/>
@@ -45,7 +59,7 @@ int	op_btr_rmv_rv(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc
 
 int i386_movzbl_rv_rmb(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
   new->len += 1;
-    if (asm_proc_oplen(proc))
+    if (asm_proc_opsize(proc))
       new->instr = ASM_MOVZBW;
     else
       new->instr = ASM_MOVZBL;
@@ -67,6 +81,22 @@ int i386_movzwl_rv_rm2(asm_instr *new, u_char *opcode, u_int len, asm_processor 
   new->op1.type = ASM_OTYPE_GENERAL;
   new->op2.type = ASM_OTYPE_ENCODED;
   operand_rv_rm2(new, opcode + 1, len - 1, proc);
+  return (new->len);
+}
+
+/*
+ <i386 func="i386_btrl" opcode="0xba"/>
+*/
+
+int	i386_btrl(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc)
+{
+  new->len += 1;
+  new->instr = ASM_BTRL;
+  new->op1.type = ASM_OTYPE_ENCODED;
+  new->op1.size = ASM_OSIZE_VECTOR;
+  new->op2.type = ASM_OTYPE_GENERAL;
+  new->op2.size = ASM_OSIZE_VECTOR;
+  operand_rmv_ib(new, opcode + 1, len - 1, proc);
   return (new->len);
 }
 
@@ -102,7 +132,7 @@ int i386_bsr_rv_rmb(asm_instr *new, u_char *opcode, u_int len, asm_processor *pr
 
 int i386_movsbl_rv_rmb(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
 
-  if (asm_proc_oplen(proc))
+  if (asm_proc_opsize(proc))
     new->instr = ASM_MOVSBW;
   else
     new->instr = ASM_MOVSBL;
@@ -119,7 +149,7 @@ int i386_movsbl_rv_rmb(asm_instr *new, u_char *opcode, u_int len, asm_processor 
 
 
 int i386_movswl_rv_rm2(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc) {
-  if (asm_proc_oplen(proc))
+  if (asm_proc_opsize(proc))
     new->instr = ASM_MOVSBW;
   else
     new->instr = ASM_MOVSWL;

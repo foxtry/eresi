@@ -1,5 +1,5 @@
 /*
-** private - do not distribute
+** $Id: tables_i386.c,v 1.8 2006-12-19 18:17:59 heroine Exp $
 ** 
 ** Author  : <sk at devhell dot org>
 ** Started : Mon Jun 10 22:42:50 2002
@@ -9,7 +9,8 @@
 
 int init_instr_table(asm_processor *proc) {
   
-  proc->instr_table = malloc(sizeof(char *) * ASM_BAD + 1);
+  proc->instr_table = malloc(sizeof(char *) * (ASM_BAD + 1));
+  memset(proc->instr_table, 0, sizeof(char *) * (ASM_BAD + 1));
   
   proc->instr_table[ASM_ADC] = "adc";
   proc->instr_table[ASM_ADD] = "add";
@@ -21,7 +22,9 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_ARPL] = "arpl";
   
   proc->instr_table[ASM_BOUND] = "bound";
-  
+  proc->instr_table[ASM_BSWAP] = "bswap";
+  proc->instr_table[ASM_BTRL] = "btrl";
+
   proc->instr_table[ASM_CMPSB] = "cmpsb";
   proc->instr_table[ASM_CMPSD] = "cmpsd";
   proc->instr_table[ASM_CALL] = "call";
@@ -40,6 +43,7 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_DIV] = "div";
   proc->instr_table[ASM_DEC] = "dec";
   
+  proc->instr_table[ASM_EMMS] = "emms";
   proc->instr_table[ASM_ENTER] = "enter";
   
   proc->instr_table[ASM_FWAIT] = "fwait";
@@ -52,6 +56,9 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_INT3] = "int3";
   proc->instr_table[ASM_INT1] = "int1";
   proc->instr_table[ASM_IN] = "in";
+  proc->instr_table[ASM_INSB] = "insb";
+  proc->instr_table[ASM_INSW] = "insw";
+  proc->instr_table[ASM_INSD] = "insd";
   proc->instr_table[ASM_INC] = "inc";
   proc->instr_table[ASM_IMUL] = "imul";
   proc->instr_table[ASM_IDIV] = "idiv";
@@ -73,7 +80,7 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_BRANCH_NOT_OVERFLOW] = "jno";
   proc->instr_table[ASM_BRANCH_SIGNED] = "js";
   proc->instr_table[ASM_BRANCH_NOT_SIGNED] = "jns";
-  proc->instr_table[ASM_BRANCH_CXZ] = "jcxz";
+  proc->instr_table[ASM_BRANCH_CXZ] = "jecxz";
 
   proc->instr_table[ASM_LEA] = "lea";
   proc->instr_table[ASM_LOAD] = "ld";
@@ -100,6 +107,8 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_MOVZBL] = "movzbl";
   proc->instr_table[ASM_MUL] = "mull";
   proc->instr_table[ASM_MOV] = "mov";
+  proc->instr_table[ASM_MOVD] = "movd";
+  proc->instr_table[ASM_MOVQ] = "movq";
 
   proc->instr_table[ASM_NEG] = "neg";
   proc->instr_table[ASM_NOT] = "not";
@@ -109,6 +118,7 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_ORB] = "orb";
   proc->instr_table[ASM_OUT] = "out";
   proc->instr_table[ASM_OUTSB] = "outsb";
+  proc->instr_table[ASM_OUTSW] = "outsw";
   
   proc->instr_table[ASM_PUSH] = "push";
   proc->instr_table[ASM_POP] = "pop";
@@ -116,6 +126,20 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_POPF] = "popf";
   proc->instr_table[ASM_PUSHA] = "pusha";
   proc->instr_table[ASM_POPA] = "popa";
+  proc->instr_table[ASM_PAND] = "pand";
+  proc->instr_table[ASM_POR] = "por";
+  proc->instr_table[ASM_PXOR] = "pxor";
+  proc->instr_table[ASM_PUNPCKLBW] = "punpcklbw";
+  proc->instr_table[ASM_PUNPCKHBW] = "punpckhbw";
+  proc->instr_table[ASM_PACKUSWB] = "packuswb";
+  proc->instr_table[ASM_PSLLQ] = "psllq";
+  proc->instr_table[ASM_PSRLQ] = "psrlq";
+  proc->instr_table[ASM_PSRLW] = "psrlw";
+  proc->instr_table[ASM_PSRAW] = "psraw";
+  proc->instr_table[ASM_PSLLW] = "psllw";
+  proc->instr_table[ASM_PMULLW] = "pmullw";
+  proc->instr_table[ASM_PADDUSW] = "paddusw";
+  proc->instr_table[ASM_PADDUSB] = "paddusb";
 
   proc->instr_table[ASM_RET] = "ret";
   proc->instr_table[ASM_REPNZ] = "repnz";
@@ -124,6 +148,7 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_ROR] = "ror";
   proc->instr_table[ASM_RCR] = "rcr";
   proc->instr_table[ASM_RETF] = "retf";
+  proc->instr_table[ASM_RDMSR] = "rdmsr";
 
   proc->instr_table[ASM_STORE] = "st";
   proc->instr_table[ASM_STI] = "sti";
@@ -144,13 +169,22 @@ int init_instr_table(asm_processor *proc) {
 
   proc->instr_table[ASM_TEST] = "test";
 
+  proc->instr_table[ASM_XADD] = "xadd";
   proc->instr_table[ASM_XOR] = "xor";
   proc->instr_table[ASM_XCHG] = "xchg";
   proc->instr_table[ASM_XLATB] = "xlatb";
+  proc->instr_table[ASM_XSTORERNG] = "xstore-rng";
+  proc->instr_table[ASM_XCRYPTCBC] = "xcrypt-cbc";
+  proc->instr_table[ASM_XCRYPTCFB] = "xcrypt-cfb";
+  proc->instr_table[ASM_XCRYPTOFB] = "xcrypt-ofb";
+  
+  proc->instr_table[ASM_WBINVD] = "wbinvd";
   
   /* i386 */
   
   proc->instr_table[ASM_SET_U_LESS] = "setb";
+  proc->instr_table[ASM_CMPXCHG] = "cmpxchg";
+  proc->instr_table[ASM_RDTSC] = "rdtsc";
   proc->instr_table[ASM_BTR] = "btr";
   proc->instr_table[ASM_SET_U_LESS_EQUAL] = "setbe";
   proc->instr_table[ASM_SET_S_LESS] = "setl";
@@ -175,15 +209,30 @@ int init_instr_table(asm_processor *proc) {
   proc->instr_table[ASM_CMOVNE] = "cmovne";
   proc->instr_table[ASM_CMOVA] = "cmova";
   proc->instr_table[ASM_CMOVAE] = "cmovae";
+  proc->instr_table[ASM_CMOVE] = "cmove";
+  proc->instr_table[ASM_CMOVO] = "cmovo";
+  proc->instr_table[ASM_CMOVNO] = "cmovno";
+  proc->instr_table[ASM_CMOVB] = "cmovb";
+  proc->instr_table[ASM_CMOVBE] = "cmovbe";
+  proc->instr_table[ASM_CMOVS] = "cmovs";
+  proc->instr_table[ASM_CMOVNS] = "cmovns";
+  proc->instr_table[ASM_CMOVP] = "cmovp";
+  proc->instr_table[ASM_CMOVNP] = "cmovnp";
+  proc->instr_table[ASM_CMOVL] = "cmovl";
+  proc->instr_table[ASM_CMOVNL] = "cmovnl";
+  proc->instr_table[ASM_CMOVLE] = "cmovle";
+  proc->instr_table[ASM_CMOVNLE] = "cmovnle";
   proc->instr_table[ASM_LSS] = "lss";
   proc->instr_table[ASM_UD2A] = "ud2a";
   proc->instr_table[ASM_LGDT] = "lgdt";
   proc->instr_table[ASM_LIDT] = "lidt";
-  proc->instr_table[ASM_SGDT] = "sgdt";
+  proc->instr_table[ASM_SGDT] = "sgdtl";
   proc->instr_table[ASM_SIDT] = "sidt";
   proc->instr_table[ASM_STR] = "str";
   proc->instr_table[ASM_LTR] = "ltr";
   proc->instr_table[ASM_LLDT] = "lldt";
+  proc->instr_table[ASM_STMXCSR] = "stmxcsr";
+  proc->instr_table[ASM_LDMXCSR] = "ldmxcsr";
   
   /* FPU */
   proc->instr_table[ASM_FILD] = "fild";

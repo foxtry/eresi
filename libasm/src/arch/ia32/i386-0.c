@@ -1,5 +1,5 @@
 /*
-** Author : <sk at devhell dot org>  
+** $Id: i386-0.c,v 1.3 2006-12-19 02:46:19 heroine Exp $
 ** Started : Sat Jun  1 03:13:28 2002
 ** Updated : Thu Apr  8 01:37:10 2004
 */
@@ -132,7 +132,7 @@ int op_add_eax_iv(asm_instr *new, u_char *opcode, u_int len, asm_processor *proc
   new->op1.content = ASM_OP_FIXED | ASM_OP_BASE;
   new->op1.len = 0;
   new->op1.base_reg = ASM_REG_EAX;
-  new->op1.regset = asm_proc_oplen(proc) ? ASM_REGSET_R16 :
+  new->op1.regset = asm_proc_opsize(proc) ? ASM_REGSET_R16 :
     ASM_REGSET_R32;
   
   new->op2.type = ASM_OTYPE_IMMEDIATE;
@@ -294,7 +294,7 @@ int op_or_eax_iv(asm_instr *new, u_char *opcode, u_int len,
   
   new->op1.type = ASM_OP_FIXED;
   new->op1.content = ASM_OP_FIXED | ASM_OP_BASE;
-  new->op1.regset = asm_proc_oplen(proc) ? 
+  new->op1.regset = asm_proc_opsize(proc) ? 
     ASM_REGSET_R16 : ASM_REGSET_R32;
   new->op1.base_reg = ASM_REG_EAX;
   
