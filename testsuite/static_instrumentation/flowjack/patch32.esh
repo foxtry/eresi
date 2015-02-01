@@ -3,11 +3,14 @@
 ## patch32.esh in flowjack testsuite for ERESI
 ## 
 
+profile enable warn
 load target32
 analyse
 load infected.32.o
 switch 1
 reladd 1 2
-flowjack subfunc hijacked
+#redir subfunc hijacked
+insert sym subfunc 0x80483e4 0 2 
+redir subfunc hijacked
 save target32.hijacked
 quit

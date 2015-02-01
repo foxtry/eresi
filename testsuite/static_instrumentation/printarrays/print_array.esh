@@ -1,8 +1,9 @@
 #!../../../elfsh/elfsh32
 
 quiet
+#profile enable warn
 
-exec gcc test-multidim-arrays.c
+#exec gcc -Wl,--hash-style=sysv -m32 test-multidim-arrays.c
 load a.out
 
 type bint = sys:int[2][3]

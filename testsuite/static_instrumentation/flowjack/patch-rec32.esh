@@ -6,6 +6,7 @@
 load recur32
 analyse
 load infected.32.o
+profile enable warn
 switch 1
 reladd 1 2
 flowjack subfunc hijacked

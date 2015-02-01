@@ -240,6 +240,7 @@ revmconst_t			elfsh_extdyn_type[] =
   {"[?]"                              , "DT_PLTPADSZ"  , DT_PLTPADSZ},
   {"[?]"                              , "DT_MOVEENT"   , DT_MOVEENT},
   {"[?]"                              , "DT_MOVESZ"    , DT_MOVESZ},
+  {"Address of GNU style hash table]" , "DT_GNU_HASH"  , DT_GNU_HASH},
 };
 
 /** 

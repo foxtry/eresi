@@ -181,6 +181,11 @@ int			elfsh_shift_ia32_relocs(elfshobj_t *file,
 	  if (strstr(parent->name, "got") || strstr(parent->name, "bss") ||
 	      strstr(parent->name, "elfsh"))
 	    continue;
+          if (strstr(parent->name, "array")) {
+		printf("shifting %s at %x,from %x to %x\n", parent->name, (char*)parent->data + off, *(eresi_Addr *)((char*)parent->data + off), 
+                                                         *(eresi_Addr *)((char*)parent->data + off) + diff);
+	    continue;
+          }
 	  *(eresi_Addr *) ((char *) parent->data + off) += diff;
 	}
     }

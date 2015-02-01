@@ -15,7 +15,7 @@
 
 /**
  * sect name maptype size align
- * sym  name value size 
+ * sym  name value size type
  * phdr type value size 
  */
 int		cmd_insert()
@@ -31,7 +31,7 @@ int		cmd_insert()
   elfsh_Word	ptype;
   eresi_Addr	val;
   u_int		modulo;
-  char		*param0, *param1, *param2, *param3, *param4;
+  char		*param0, *param1, *param2, *param3, *param4, *param5;
   char		logbuf[BUFSIZ];
 
   PROFILER_IN(__FILE__, __FUNCTION__, __LINE__);
@@ -40,6 +40,7 @@ int		cmd_insert()
   param2 = world.curjob->curcmd->param[2];
   param3 = world.curjob->curcmd->param[3];
   param4 = world.curjob->curcmd->param[4];
+  param5 = world.curjob->curcmd->param[5];
 
   /* Checks (needed because the command takes variable amount of params) */
   if (!param0 || !param1 || !param2)
@@ -112,6 +113,8 @@ int		cmd_insert()
   /* Third parameter indicate existing symbol name or value */
   else if (!strcmp(param0, "sym"))
     {
+      int stinfo = modulo;
+
       expr = revm_lookup_param(param2, 1);
       if (!expr || !expr->value || !expr->value->otype || 
 	  (expr->value->otype->type != ASPECT_TYPE_LONG && expr->value->otype->type != ASPECT_TYPE_INT))
@@ -123,7 +126,7 @@ int		cmd_insert()
 	PROFILER_ERR(__FILE__, __FUNCTION__, __LINE__, 
 			  "Cannot retreive symbol table", -1);
 
-      sym = elfsh_create_symbol(val, size, 0, 0, 0, 0);
+      sym = elfsh_create_symbol(val, size, ELFSH_ST_TYPE(stinfo), ELFSH_ST_BIND(stinfo), 0, 0);
       if (elfsh_insert_symbol(world.curjob->curfile->secthash[ELFSH_SECTION_SYMTAB],
 			      &sym, name) < 0)
 	PROFILER_ERR(__FILE__, __FUNCTION__, __LINE__,

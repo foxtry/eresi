@@ -1,8 +1,8 @@
 #!../../etrace/etrace32
 load ./host32
 traces add main
-traces create critical
-traces add crypt critical
+#traces create critical
+#traces add crypt critical
 traces create mainnodes
 traces add .*func mainnodes
 traces add testcrypt mainnodes

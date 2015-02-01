@@ -46,7 +46,7 @@ int		main(int argc, char **argv)
   /* mainnodes scope */
   traces_create(host, mainnode[0], NULL);
   traces_add(host, "firstfunc", mainnode);
-  traces_add(host, "testcrypt", mainnode);
+  //traces_add(host, "testcrypt", mainnode);
 
   /* Save it */
   if (etrace_save_obj(host, TRACED_FILE) < 0)

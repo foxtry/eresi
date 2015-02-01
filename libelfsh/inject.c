@@ -226,6 +226,7 @@ int		elfsh_insert_code_section(elfshobj_t	*file,
       /* ALTGOT section is not present in unmodified binaries so its not a fatal error */
       elfsh_shift_got(file, sect->shdr->sh_size, ELFSH_SECTION_NAME_ALTGOT);
 
+#if 0
       if (elfsh_shift_dtors(file, sect->shdr->sh_size) < 0)
         PROFILER_ERR(__FILE__, __FUNCTION__, __LINE__,
                           "Cannot shift dtors in ET_DYN", -1);
@@ -233,6 +234,13 @@ int		elfsh_insert_code_section(elfshobj_t	*file,
       if (elfsh_shift_ctors(file, sect->shdr->sh_size) < 0)
         PROFILER_ERR(__FILE__, __FUNCTION__, __LINE__,
                           "Cannot shift ctors in ET_DYN", -1);
+#else
+      /* some shared libraries have no .dtors/.ctors */
+      elfsh_shift_dtors(file, sect->shdr->sh_size);
+      elfsh_shift_ctors(file, sect->shdr->sh_size);
+      elfsh_shift_initarray(file, sect->shdr->sh_size);
+      elfsh_shift_finiarray(file, sect->shdr->sh_size);
+#endif
 
       elfsh_set_entrypoint(file->hdr, elfsh_get_entrypoint(file->hdr) + sect->shdr->sh_size);
     }

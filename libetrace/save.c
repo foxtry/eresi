@@ -297,7 +297,7 @@ int			etrace_save_tracing(elfshobj_t *file)
   eresi_Addr		addr;
   elfsh_Sym		*dst;
   int			err;
-  char			*system[6];
+  char			*system[8];
   char			buf[BUFSIZ];
 
   PROFILER_IN(__FILE__, __FUNCTION__, __LINE__);
@@ -622,10 +622,12 @@ int			etrace_save_tracing(elfshobj_t *file)
   /* Simple array for execvp */
   system[0] = "gcc";
   system[1] = "-c";
-  system[2] = rtfname;
-  system[3] = "-o";
-  system[4] = rsofname;
-  system[5] = NULL;
+  system[2] = "-m32";
+  system[3] = "-Wl,--hash-style=sysv";
+  system[4] = rtfname;
+  system[5] = "-o";
+  system[6] = rsofname;
+  system[7] = NULL;
 
   err = 0;
   if (!fork())

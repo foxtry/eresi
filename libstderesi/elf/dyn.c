@@ -202,6 +202,7 @@ void		revm_dynentinfo(elfshobj_t	*file,
     case DT_STRTAB:
     case DT_SYMTAB:
     case DT_HASH:
+    case DT_GNU_HASH:
     case DT_RELA:
     case DT_INIT:
     case DT_FINI:
@@ -324,9 +325,10 @@ char		*revm_getdyntype(u_int type)
 {
   u_int		idx;
 
-  for (idx = 0; idx < ELFSH_EXTDYN_MAX; idx++)
+  for (idx = 0; idx < ELFSH_EXTDYN_MAX; idx++) {
     if (elfsh_extdyn_type[idx].val == type)
       return ((char *) elfsh_extdyn_type[idx].desc);
+  }
   for (idx = 0; idx < ELFSH_MIPSDYN_MAX; idx++)
     if (elfsh_mipsdyn_type[idx].val == type)
       return ((char *) elfsh_mipsdyn_type[idx].desc);

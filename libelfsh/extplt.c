@@ -216,9 +216,12 @@ int		elfsh_extplt_mirror_sections(elfshobj_t *file)
     {
       versym = file->secthash[ELFSH_SECTION_GNUVERSYM];
 
+    /* android library has no versym */
+#if 0
       if (!versym)
 	PROFILER_ERR(__FILE__, __FUNCTION__, __LINE__, 
 		     "Call ALTPLT (elfsh_copy_plt) first", -1);
+#endif
     }
   
   /* grab relocation tables */
@@ -341,7 +344,7 @@ int		elfsh_extplt_mirror_sections(elfshobj_t *file)
   enew->shdr->sh_entsize = IS_REL(dynamic) ? sizeof(elfsh_Rel) : sizeof(elfsh_Rela);
 
   /* Versym expand is only for linux */
-  if (elfsh_get_ostype(file) == ELFSH_OS_LINUX)
+  if (elfsh_get_ostype(file) == ELFSH_OS_LINUX && versym)
     {
       /* Same for .gnu.version */
       enew = elfsh_insert_section(file, ELFSH_SECTION_NAME_ALTVERSYM, NULL,

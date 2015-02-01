@@ -12,7 +12,7 @@ include ../config.h
 #
 
 #CFLAGS += -ggdb
-CFLAGS += $(CFLAGS_libasm) $(EXTRACFLAGS)
+CFLAGS += $(CFLAGS_libasm) $(EXTRACFLAGS) $(32BIT_CFLAG)
 
 SRCS_libasm 	=				\
 		src/generic.c			\
@@ -170,12 +170,12 @@ libasm32.so: $(PACKED_ARCH) $(OBJS32_libasm)
 #echo "[AR] ${NAME32_libasm}"
 	${RANLIB} ${NAME32_libasm}
 #echo "[RANLIB] ${NAME_libasm}"
-	$(LD) -r $(OBJS32_libasm) -o ${NAME32_libasm_o}
+	$(LD) $(32BIT_LDFLAG) -r $(OBJS32_libasm) -o ${NAME32_libasm_o}
 #echo "[CC -shared] libasm32.so"
 ifeq ($(IRIX),1)
-	$(LD) -L../libaspect/ -laspect32 ${OBJS32_libasm} -o libasm32.so -shared
+	$(LD) $(32BIT_LDFLAG) -L../libaspect/ -laspect32 ${OBJS32_libasm} -o libasm32.so -shared
 else
-	$(CC) -L../libaspect/ -laspect32 ${OBJS32_libasm} -o libasm32.so -shared
+	$(CC) $(32BIT_CFLAG) -L../libaspect/ -laspect32 ${OBJS32_libasm} -o libasm32.so -shared
 endif
 
 libasm64.so: $(PACKED_ARCH) $(OBJS64_libasm)
@@ -214,7 +214,7 @@ docs:
 	doxygen doc/doxygen.conf
 
 mydisasm32:
-	$(CC) -g3 -I../libelfsh/include/ -I../libaspect/include/ -I./include/ \
+	$(CC) $(32BIT_CFLAG) -g3 -I../libelfsh/include/ -I../libaspect/include/ -I./include/ \
 	tools/mydisasm.c -DERESI32 -o ./mydisasm -L ../libelfsh/ -lelfsh32 \
 	-L../libaspect/ -laspect32 -L./ -lasm32
 

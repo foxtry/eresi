@@ -28,8 +28,8 @@ CFLAGS64 =$(shell eresi-config64 libetrace libstderesi --cflags) #-gdwarf-2
 all: all32 all64
 
 all32	: $(OBJ32)
-	$(CC) $(HOSTSRC) -o $(HOSTNAM32) $(HOSTLIB) 
-	$(CC) $(OBJ32) -o $(NAM32) $(LIB32) 
+	$(CC) -m32 -Wl,--hash-style=sysv $(HOSTSRC) -o $(HOSTNAM32) $(HOSTLIB) 
+	$(CC) -Wl,--hash-style=sysv $(OBJ32) -o $(NAM32) $(LIB32) 
 
 all64	: $(OBJ64)
 	$(CC) $(HOSTSRC) -o $(HOSTNAM64) $(HOSTLIB) 
@@ -42,7 +42,8 @@ fclean	: clean
 	$(RM) $(NAM32) $(NAM64) $(HOSTNAM32) $(HOSTNAM64)
 
 %.32.o:	%.c
-	$(CC) -c $< -o $@ $(CFLAGS32) -g
+	$(CC) -Wl,--hash-style=sysv -c $< -o $@ $(CFLAGS32) -g
+
 
 %.64.o:	%.c
 	$(CC) -c $< -o $@ $(CFLAGS64) -g

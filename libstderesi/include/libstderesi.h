@@ -260,7 +260,7 @@ extern u_char   quit_msg_setup;
 #define	ELFSH_SYMTYPE_MAX	STT_NUM + 1
 #define	ELFSH_ENCODING_MAX	3
 #define	ELFSH_DYNAMIC_MAX	35
-#define	ELFSH_EXTDYN_MAX	19
+#define	ELFSH_EXTDYN_MAX	20
 #define ELFSH_MIPSDYN_MAX	43
 #define	ELFSH_ARCHTYPE_MAX	95
 #define	ELFSH_EXTSEG_MAX	5

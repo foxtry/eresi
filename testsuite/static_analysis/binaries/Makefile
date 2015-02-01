@@ -11,9 +11,9 @@ test:	bin
 	@${ELFSH} -f bin -rel | tee tRel.elfsh.log
 
 bin:
-	cc -c bin.c
-	cc -fPIC -shared -o libfunc.so libfunc.c
-	cc -o bin bin.o -L. -lfunc
+	cc -m32 -c bin.c
+	cc -m32 -fPIC -shared -o libfunc.so libfunc.c
+	cc -m32 -o bin bin.o -L. -lfunc
 
 fclean:
 clean:

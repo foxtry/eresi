@@ -11,8 +11,20 @@
 */
 #include <stdio.h>
 
+#if 0
 void	hijacked(int arg)
 {
   printf("arg %i hijacked\n", arg);
-  subfunc(arg);
+  old_subfunc(arg);
+}
+#endif
+
+extern char *old_get_macaddr(void);
+char *new_get_macaddr(void)
+{
+  char *s;
+  printf("get_macaddr hijacked\n");
+  s = old_get_macaddr();
+  printf("%s\n", s);
+  return s;
 }

@@ -245,6 +245,7 @@ int       elfsh_get_pagesize(elfshobj_t *file)
     {
     case ELFSH_ARCH_IA32:
     case ELFSH_ARCH_MIPS32:
+    case ELFSH_ARCH_ARM:
       PROFILER_ROUT(__FILE__, __FUNCTION__, __LINE__, 4096);
     case ELFSH_ARCH_SPARC32:
     case ELFSH_ARCH_SPARC64:

@@ -11,7 +11,7 @@ LD	?= ld
 SRC	= aproxy_malloc.c aproxy_strdup.c
 OBJ	= $(SRC:.c=.o)
 CFLAGS	+= -D__STD_C -DMALLOC_DEBUG -DUSE_ARENAS -DSHARED -DUSE_TLS \
-	-fPIC -g3 -Iinclude -I../libelfsh/include/
+	-fPIC -g3 -Iinclude -I../libelfsh/include/ $(32BIT_CFLAG)
 NAME	= allocproxy
 
 all	: heap
@@ -19,7 +19,7 @@ all	: heap
 lib$(NAME).o	: $(OBJ)
 	$(AR) rc lib$(NAME).a $(OBJ)
 	$(RANLIB) lib$(NAME).a
-	$(LD) -r $(OBJ) -o lib$(NAME).o
+	$(LD) $(32BIT_LDFLAG) -r $(OBJ) -o lib$(NAME).o
 
 heap:	lib$(NAME).o
 

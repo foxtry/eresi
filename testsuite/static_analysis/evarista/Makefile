@@ -37,9 +37,9 @@ SRC	= 1.simple_appel_de_methode.cpp                         \
 	  34.interprocedural_heap_corruption_static.c
 
 OBJ	 = $(SRC:.cpp=.o)
-CC	 = g++
-LD	 = g++
-CXX	 = g++
+CC	 = g++ -m32
+LD	 = g++ -m32
+CXX	 = g++ -m32
 CFLAGS	 = 
 CXXFLAGS = 
 LDFLAGS  = 

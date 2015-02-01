@@ -1,7 +1,7 @@
 
 SRC	= test-ptrfn1.c test-ptrfn2.c test-ptrfn3.c test-recur.c test-moredepth.c
 OBJ	= $(SRC:.c=.o)
-CC	?= gcc
+CC	?= gcc -m32
 RM	= rm -fr
 
 all32: all

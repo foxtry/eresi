@@ -59,6 +59,7 @@ printHelp()
     echo "   --set-compiler    : Set your compiler path."
     echo "   --set-editor      : Set your editor path."
     echo "   --set-modpath     : Set your ELFsh modules path."
+    echo "   --set-lib-path    : Setting ELFsh library search path."
     echo "   --prefix <path>   : Set prefix."
     echo
     echo "   All options are disabled by default."

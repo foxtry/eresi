@@ -65,12 +65,12 @@
 #define		__DEBUG_MAP__		       0
 #define		__DEBUG_SECTS__		       0
 #define		__DEBUG_SORT__		       0	
-#define		__DEBUG_RELADD__	       0
-#define		__DEBUG_COPYPLT__	       0
+#define		__DEBUG_RELADD__	       1
+#define		__DEBUG_COPYPLT__	       1
 #define		__DEBUG_BSS__		       0
-#define		__DEBUG_REDIR__		       0
+#define		__DEBUG_REDIR__		       1
 #define		__DEBUG_RUNTIME__	       0
-#define		__DEBUG_CFLOW__		       0
+#define		__DEBUG_CFLOW__		       1
 #define		__DEBUG_STATIC__	       0
 #define		__DEBUG_BREAKPOINTS__	       0
 #define		__DEBUG_ETRELintoETDYN__       0
@@ -179,9 +179,11 @@
 #define		ELFSH_SECTION_NAME_ALTRELPLT	".elfsh.relplt"
 #define		ELFSH_SECTION_NAME_PADPAGE	".elfsh.padpage"
 #define		ELFSH_SECTION_NAME_HASH		".hash"
+#define		ELFSH_SECTION_NAME_GNUHASH	".gnu.hash"
 #define		ELFSH_SECTION_NAME_VERSYM	".version"
 #define		ELFSH_SECTION_NAME_ALTVERSYM	".elfsh.version"
 #define		ELFSH_SECTION_NAME_ALTHASH	".elfsh.hash"
+#define		ELFSH_SECTION_NAME_ALTGNUHASH	".elfsh.gnu.hash"
 #define		ELFSH_SECTION_NAME_EDFMT_BLOCKS	".edfmt.blocks"
 #define		ELFSH_SECTION_NAME_EDFMT_BCONTROL	".edfmt.bcontrol"
 #define		ELFSH_SECTION_NAME_EDFMT_FUNCTIONS	".edfmt.function"
@@ -221,6 +223,8 @@
 #define		ELFSH_SECTION_NAME_EHFRAME	".eh_frame"
 #define		ELFSH_SECTION_NAME_INIT		".init"
 #define		ELFSH_SECTION_NAME_FINI		".fini"
+#define		ELFSH_SECTION_NAME_INIT_ARRAY   ".init_array"
+#define		ELFSH_SECTION_NAME_FINI_ARRAY   ".fini_array"
 
 /* Debug section names */
 #define		ELFSH_SECTION_NAME_DEBUG       	".debug"
@@ -288,6 +292,9 @@
 #define 	ELFSH_SECTION_DW2_MACINFO	44
 #define 	ELFSH_SECTION_DW2_LOC		45
 #define		ELFSH_SECTION_VERSYM		46
+#define		ELFSH_SECTION_GNUHASH		47
+#define		ELFSH_SECTION_INIT_ARRAY	48
+#define		ELFSH_SECTION_FINI_ARRAY	49
 #define		ELFSH_SECTION_MAX		254
 #define		ELFSH_SECTION_UNKNOWN		255
 
@@ -317,6 +324,8 @@
 
 #define		ELFSH_END_CTORS			((eresi_Addr) 0xFFFFFFFF)
 #define		ELFSH_END_DTORS		        ELFSH_END_CTORS
+#define		ELFSH_END_INIT_ARRAY		ELFSH_END_CTORS
+#define		ELFSH_END_FINI_ARRAY		ELFSH_END_CTORS
 
 #define		ELFSH_SHIFTING_ABSENT		0
 #define		ELFSH_SHIFTING_NONE		1
@@ -364,6 +373,8 @@
 #define	FILE_IS_IA64(obj)   ((elfsh_get_arch((obj)->hdr)) == EM_IA_64 ? 1 : 0)
 #define	FILE_IS_IA32(obj)   ((elfsh_get_arch((obj)->hdr)) == EM_386 ? 1 : 0)
 
+#define	FILE_IS_ARM(obj)   ((elfsh_get_arch((obj)->hdr)) == EM_ARM ? 1 : 0)
+
 #define	FILE_IS_ALPHA64(obj) ((elfsh_get_arch((obj)->hdr)) == EM_ALPHA || \
                              (elfsh_get_arch((obj)->hdr)) == EM_ALPHA_EXP ? 1 : 0)
 
@@ -401,6 +412,9 @@ do						  \
 #define		EI_RPHT			   10	/* Index in e_ident[] where to read rphtoff */
 
 /* Those symbol doesn't exist on every OS */
+#ifndef SHT_GNU_hash
+#define SHT_GNU_hash	  0x6ffffff6	/* GNU sytle hash table.  */
+#endif
 #ifndef SHT_GNU_verdef
 #define SHT_GNU_verdef	  0x6ffffffd	/* Version definition section.  */
 #endif
@@ -1226,6 +1240,26 @@ int		elfsh_set_ctors_entry_by_name(elfshobj_t *file, char *name, eresi_Addr a);
 int		elfsh_set_ctors_entry_by_index(elfshobj_t *file, int index, eresi_Addr a);
 int		elfsh_set_ctors_entry(eresi_Addr *ctors, eresi_Addr vaddr);
 int		elfsh_shift_ctors(elfshobj_t *file, u_int size);
+
+/* init_array.c */
+eresi_Addr     	*elfsh_get_initarray(elfshobj_t *file, int *num);
+eresi_Addr     	*elfsh_get_initarray_entry_by_index(eresi_Addr *initarray, eresi_Addr index);
+eresi_Addr     	*elfsh_get_initarray_entry_by_name(elfshobj_t *file, char *name);
+eresi_Addr     	elfsh_get_initarray_entry(eresi_Addr *initarray);
+int		elfsh_set_initarray_entry_by_name(elfshobj_t *file, char *name, eresi_Addr a);
+int		elfsh_set_initarray_entry_by_index(elfshobj_t *file, int index, eresi_Addr a);
+int		elfsh_set_initarray_entry(eresi_Addr *initarray, eresi_Addr vaddr);
+int		elfsh_shift_iiniarray(elfshobj_t *file, u_int size);
+
+/* fini_array.c */
+eresi_Addr     	*elfsh_get_finiarray(elfshobj_t *file, int *num);
+eresi_Addr     	*elfsh_get_finiarray_entry_by_index(eresi_Addr *finiarray, eresi_Addr index);
+eresi_Addr     	*elfsh_get_finiarray_entry_by_name(elfshobj_t *file, char *name);
+eresi_Addr     	elfsh_get_finiarray_entry(eresi_Addr *finiarray);
+int		elfsh_set_finiarray_entry_by_name(elfshobj_t *file, char *name, eresi_Addr a);
+int		elfsh_set_finiarray_entry_by_index(elfshobj_t *file, int index, eresi_Addr a);
+int		elfsh_set_finiarray_entry(eresi_Addr *finiarray, eresi_Addr vaddr);
+int		elfsh_shift_finiarray(elfshobj_t *file, u_int size);
 
 /* section.c */
 elfshsect_t	*elfsh_get_section_by_type(elfshobj_t *, u_int type, int range, int *, int *, int *);

@@ -247,6 +247,8 @@ int		elfsh_shiftable_dynent(elfsh_Dyn *ent)
     {
     case DT_INIT:
     case DT_FINI:
+    case DT_INIT_ARRAY:
+    case DT_FINI_ARRAY:
     case DT_HASH:
     case DT_STRTAB:
     case DT_SYMTAB:

@@ -4,7 +4,8 @@
 
 int testcrypt()
 {
-  crypt("password", "salt");
+//  crypt("password", "salt");
+ printf("crypt\n");
   return 5;
 }
 

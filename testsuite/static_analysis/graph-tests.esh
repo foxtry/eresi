@@ -5,8 +5,8 @@
 #quiet 
 
 # don't popup any windows, just generate .png files
-configure graph.autoview 0
-configure libasm.output.att.margin 5
+#configure graph.autoview 0
+#configure libasm.output.att.margin 5
 
 nocolor
 

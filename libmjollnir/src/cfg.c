@@ -357,11 +357,18 @@ eresi_Addr		 mjr_get_call_destaddr(mjrcontext_t *context)
 
       /* ARM architecture */
     case ASM_PROC_ARM:
-      if (!(ins->type & ASM_TYPE_INDCONTROL))
+      if (!(ins->type & ASM_TYPE_INDCONTROL)) {
+
+/* should not call arch dependent code here, otherwise link fail if arm not enabled in libasm 
+   TODO: we should add a call back for such needs */
+#if LIBASM_ENABLE_ARM == 1
         /* BLX(1) & BL */
         dest = asm_dest_resolve_arm(context->hist[MJR_HISTORY_CUR].vaddr, ins->op[0].imm,
                                     (ins->op[0].content == ASM_ARM_OTYPE_DISP_HALF) ? 1 : 0);
-      else
+#else
+        dest = MJR_BLOCK_INVALID;
+#endif
+      } else
         /* Call to register */
         /* BLX(2) */
         dest = MJR_BLOCK_INVALID;
@@ -471,8 +478,12 @@ eresi_Addr	mjr_get_jmp_destaddr(mjrcontext_t *context)
                 dest = ins->op[1].imm;
             }
           else
+#if LIBASM_ENABLE_ARM == 1
             /* B */
             dest = asm_dest_resolve_arm(context->hist[MJR_HISTORY_CUR].vaddr, ins->op[0].imm, 0);
+#else
+            dest = MJR_BLOCK_INVALID;
+#endif
         }
       else
         /* Jump to register */

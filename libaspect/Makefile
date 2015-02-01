@@ -6,7 +6,7 @@
 include ../config.h
 
 CC		?= gcc
-LD		= ld
+LD		= ld 
 RM		= rm -f 
 AR		= ar rc
 RANLIB		= ranlib
@@ -24,10 +24,10 @@ NAME64		= libaspect64
 all		: all32 all64
 
 libaspect32.so	: $(OBJ32)
-		@$(CC) -L../liballocproxy/ -lallocproxy $(DLOPT) -shared $(OBJ32) -o $(NAME32).so
-		@$(AR) $(NAME32).a $(OBJ32)
-		@$(RANLIB) $(NAME32).a
-		$(LD) -r $(OBJ32) -o $(NAME32).o
+		$(CC) $(CFLAGS32) -L../liballocproxy/ -lallocproxy $(DLOPT) -shared $(OBJ32) -o $(NAME32).so
+		$(AR) $(NAME32).a $(OBJ32)
+		$(RANLIB) $(NAME32).a
+		$(LD) $(32BIT_LDFLAG) -r $(OBJ32) -o $(NAME32).o
 
 all32:	libaspect32.so
 
